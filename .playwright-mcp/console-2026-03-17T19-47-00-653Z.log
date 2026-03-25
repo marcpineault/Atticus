@@ -1,0 +1,71 @@
+[    1000ms] [ERROR] Warning: React Element cannot be passed to Server Functions from the Client.%s 
+  {publishableKey: ..., secretKey: ..., claimUrl: ..., apiKeysUrl: ..., children: </>, returnUrl: ...}
+                                                                                  ^^^ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[    1000ms] [ERROR] Warning: React Lazy cannot be passed to Server Functions from the Client.%s 
+  </> @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[    1001ms] [ERROR] Warning: React Element cannot be passed to Server Functions from the Client.%s 
+  {publishableKey: ..., secretKey: ..., claimUrl: ..., apiKeysUrl: ..., children: </>, returnUrl: ...}
+                                                                                  ^^^ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[    1001ms] [ERROR] Warning: React Lazy cannot be passed to Server Functions from the Client.%s 
+  </> @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[    1032ms] Error: Client Functions cannot be passed directly to Server Functions. Only Functions passed from the Server can be passed back again.
+    at Object.resolveToJSON (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1045:13)
+    at JSON.stringify (<anonymous>)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:895:31)
+    at Chunk.then (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1147:7)
+    at Object.resolveToJSON (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:894:18)
+    at JSON.stringify (<anonymous>)
+    at processReply (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1068:19)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2190:5)
+    at new Promise (<anonymous>)
+    at encodeReply (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2189:10)
+    at fetchServerAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js:32:24)
+    at serverActionReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js:102:36)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:49:69)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)
+    at dispatchAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:113:9)
+    at Object.dispatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:145:40)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/use-reducer-with-devtools.js:130:21)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:130:13)
+    at startTransition (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2597:25)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:129:36)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-call-server.js:18:9)
+    at new Promise (<anonymous>)
+    at callServer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-call-server.js:17:12)
+    at Module.proxy (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1093:12)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/@clerk/nextjs/dist/esm/app-router/client/keyless-cookie-sync.js:21:327)
+[    1032ms] Error: Client Functions cannot be passed directly to Server Functions. Only Functions passed from the Server can be passed back again.
+    at Object.resolveToJSON (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1045:13)
+    at JSON.stringify (<anonymous>)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:895:31)
+    at Chunk.then (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1147:7)
+    at Object.resolveToJSON (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:894:18)
+    at JSON.stringify (<anonymous>)
+    at processReply (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:1068:19)
+    at eval (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2190:5)
+    at new Promise (<anonymous>)
+    at encodeReply (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-server-dom-webpack/cjs/react-server-dom-webpack-client.browser.development.js:2189:10)
+    at fetchServerAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js:32:24)
+    at serverActionReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/reducers/server-action-reducer.js:102:36)
+    at clientReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/router-reducer/router-reducer.js:49:69)
+    at Object.action (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:150:55)
+    at runAction (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:56:38)
+    at runRemainingActions (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:30:13)
+    at handleResult (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/shared/lib/router/action-queue.js:66:9)
+[    1078ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/trpc/clients.list,documents.list?batch=1&input=%7B%7D:0
+[    1250ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ https://unique-antelope-36.clerk.accounts.dev/npm/@clerk/clerk-js@6/dist/clerk.browser.js:11
+[    2129ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/trpc/clients.list,documents.list?batch=1&input=%7B%7D:0
+[    4190ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/trpc/clients.list,documents.list?batch=1&input=%7B%7D:0
+[    8248ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/trpc/clients.list,documents.list?batch=1&input=%7B%7D:0
+[  496002ms] [WARNING] [Fast Refresh] performing full reload
+
+Fast Refresh will perform a full reload when you edit a file that's imported by modules outside of the React rendering tree.
+You might have a file which exports a React component but also exports a value that is imported by a non-React component file.
+Consider migrating the non-React component export to a separate file and importing it into both files.
+
+It is also possible the parent component of the component you edited is a class component, which disables Fast Refresh.
+Fast Refresh requires at least one parent function component in your React tree. @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:112
+[  497658ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/dashboard?_rsc=p0ba9:0
+[  498386ms] [ERROR]  Note that 'script-src' was not explicitly set, so 'default-src' is used as a fallback. @ https://unique-antelope-36.accounts.dev/_next/static/chunks/pages/_app-ae82798d2d1e6bbf.js:23
+[  498602ms] [WARNING] Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview @ https://unique-antelope-36.accounts.dev/_next/static/chunks/pages/_app-ae82798d2d1e6bbf.js:19

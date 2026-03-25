@@ -1,0 +1,307 @@
+import type { Metadata } from "next";
+import Script from "next/script";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Curo Alternative for Ontario Lawyers | Atticus vs Curo Legal",
+  description:
+    "Looking for a Curo alternative? Compare Atticus vs Curo Legal for Ontario law firms. Atticus combines full practice management, Canadian legal AI, LSO-compliant trust accounting, and HST billing — built for Ontario solo and small law firms.",
+  openGraph: {
+    title: "Curo Alternative for Ontario Lawyers | Atticus vs Curo Legal",
+    description:
+      "Why Ontario lawyers choose Atticus over Curo Legal. Atticus delivers complete Ontario practice management, LSO-compliant trust accounting, and Canadian legal AI at $149 CAD/lawyer/month.",
+    url: "https://getatticus.ca/curo-alternative",
+    siteName: "Atticus",
+    type: "website",
+  },
+};
+
+const schemaJson = `{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Atticus",
+  "applicationCategory": "LegalSoftware",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "149",
+    "priceCurrency": "CAD",
+    "priceSpecification": {
+      "@type": "UnitPriceSpecification",
+      "price": "149",
+      "priceCurrency": "CAD",
+      "unitText": "per lawyer per month"
+    }
+  },
+  "description": "Atticus is the Curo Legal alternative for Ontario lawyers — Canadian legal AI, LSO-compliant trust accounting, HST billing, full practice management, and AI document analysis at $149 CAD per lawyer per month.",
+  "url": "https://getatticus.ca",
+  "featureList": [
+    "AI-powered document analysis and management",
+    "Ontario trust accounting (Law Society By-Law 9 compliant)",
+    "HST billing and CRA-compliant invoicing",
+    "Matter and time management",
+    "Limitation period tracking",
+    "Client intake automation",
+    "Conflict checking",
+    "LSO compliance built in"
+  ]
+}`;
+
+type Feature = {
+  feature: string;
+  atticus: string;
+  curo: string;
+};
+
+const featureComparison: Feature[] = [
+  {
+    feature: "Practice management",
+    atticus: "Full integrated practice management for all Ontario practice areas",
+    curo: "Legal billing and financial management tool — not a complete practice management platform",
+  },
+  {
+    feature: "Ontario trust accounting",
+    atticus: "Built-in, LSO By-Law 9 compliant; mixed trust, monthly reconciliation",
+    curo: "No Ontario-specific LSO trust accounting",
+  },
+  {
+    feature: "HST billing",
+    atticus: "Native HST with CRA-compliant invoices built in",
+    curo: "Billing tools available; Ontario HST and CRA compliance requires verification",
+  },
+  {
+    feature: "Time tracking",
+    atticus: "Integrated time and billing; AI-assisted time capture",
+    curo: "Time tracking and billing focus",
+  },
+  {
+    feature: "AI legal work",
+    atticus: "Canadian legal AI: document analysis, entity extraction, limitation period flagging, semantic search",
+    curo: "No built-in Canadian legal AI or document intelligence",
+  },
+  {
+    feature: "Matter management",
+    atticus: "Full matter lifecycle from intake to close for all Ontario practice areas",
+    curo: "Financial and billing management focus rather than full matter lifecycle",
+  },
+  {
+    feature: "Canadian / Ontario context",
+    atticus: "Built for Ontario law: Limitations Act 2002, LSO By-Law 9 trust accounting, Ontario court procedures",
+    curo: "Not built specifically for Ontario law firm practice management or LSO compliance",
+  },
+  {
+    feature: "Limitation period alerts",
+    atticus: "Ontario Limitations Act 2002 built in; AI extracts dates from documents",
+    curo: "No limitation period tracking or Ontario Limitations Act 2002 intelligence",
+  },
+  {
+    feature: "Conflict checking",
+    atticus: "Automated AI-assisted conflict search",
+    curo: "No conflict checking functionality",
+  },
+  {
+    feature: "LSO compliance",
+    atticus: "Built for Ontario LSO requirements; Canadian data residency; LSO AI guidance considered",
+    curo: "No Ontario LSO-specific compliance features",
+  },
+  {
+    feature: "Platform type",
+    atticus: "Full Ontario law firm practice management platform with AI",
+    curo: "Legal billing and financial management software",
+  },
+  {
+    feature: "Target user",
+    atticus: "Ontario solo and small law firms ($149 CAD/lawyer/month all-in)",
+    curo: "Law firm billing and financial teams; not purpose-built for Ontario solo practices",
+  },
+  {
+    feature: "Data residency",
+    atticus: "Canadian servers by default",
+    curo: "Data residency requires verification",
+  },
+  {
+    feature: "Complete solution",
+    atticus: "End-to-end Ontario practice management: intake, conflicts, matters, time, trust, billing, AI",
+    curo: "Billing and financial management focus — requires separate tools for practice and matter management",
+  },
+];
+
+const reasons = [
+  {
+    title: "Complete Practice Management, Not Just Billing",
+    description:
+      "Curo Legal focuses on legal billing and financial management. Atticus is a complete Ontario practice management platform — intake, conflicts, matters, time tracking, trust accounting, HST billing, and Canadian AI, all in one place.",
+  },
+  {
+    title: "LSO By-Law 9 Trust Accounting Built In",
+    description:
+      "Atticus includes trust accounting built specifically for Ontario LSO By-Law 9 compliance — mixed trust accounts, monthly reconciliation, and trust ledger reports. Curo has no Ontario-specific LSO trust accounting functionality.",
+  },
+  {
+    title: "Canadian Legal AI Integrated With Your Practice",
+    description:
+      "Atticus AI is trained on Canadian and Ontario legal context. It extracts limitation dates from documents, links to client files, flags compliance issues, and answers practice management questions — all integrated with your matters, not bolted on.",
+  },
+  {
+    title: "Ontario Limitation Period Intelligence",
+    description:
+      "Atticus AI extracts key dates from your client documents and applies Ontario Limitations Act 2002 rules automatically — integrated with your matter management. Curo has no limitation period tracking or Ontario deadline intelligence.",
+  },
+  {
+    title: "Built for Ontario Law From Day One",
+    description:
+      "Atticus is built for Ontario: Limitations Act 2002, LSO By-Law 9, Ontario court procedures, HST billing, and CRA-compliant invoicing. Curo is a billing and financial platform not purpose-built for the Ontario legal market.",
+  },
+  {
+    title: "All-In Pricing at $149 CAD",
+    description:
+      "Atticus is $149 CAD per lawyer per month for complete Ontario practice management including AI. No need for a separate practice management system plus a standalone billing tool.",
+  },
+];
+
+export default function CuroAlternativePage() {
+  return (
+    <>
+      <Script id="curo-alternative-schema" type="application/ld+json">
+        {schemaJson}
+      </Script>
+
+      <div className="min-h-screen bg-white">
+        <section className="bg-gradient-to-br from-slate-900 to-slate-700 text-white py-20 px-6">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-block bg-amber-400 text-slate-900 text-sm font-semibold px-4 py-1 rounded-full mb-6">
+              Curo Legal Alternative
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+              The Curo Legal Alternative for Ontario Lawyers
+            </h1>
+            <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+              Curo Legal focuses on billing and financial management — not a complete practice
+              management platform for Ontario law firms. Atticus is built from the ground up for
+              Ontario — LSO-compliant trust accounting, Canadian AI integrated with your practice,
+              and full management at $149 CAD per lawyer per month.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/sign-up"
+                className="bg-amber-400 text-slate-900 font-semibold px-8 py-4 rounded-lg hover:bg-amber-300 transition-colors"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="/pricing"
+                className="border border-white text-white font-semibold px-8 py-4 rounded-lg hover:bg-white hover:text-slate-900 transition-colors"
+              >
+                View Pricing
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 px-6">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-slate-900 mb-4">
+              Why Ontario Lawyers Choose Atticus Over Curo Legal
+            </h2>
+            <p className="text-center text-slate-600 mb-12 max-w-2xl mx-auto">
+              Atticus is a complete Ontario law firm platform — practice management, trust accounting,
+              and Canadian AI built for the lawyers doing the legal work. Not just a billing tool
+              requiring a separate practice management system.
+            </p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {reasons.map((reason, i) => (
+                <div key={i} className="bg-slate-50 rounded-xl p-6 border border-slate-100">
+                  <div className="w-10 h-10 bg-amber-400 rounded-lg flex items-center justify-center text-slate-900 font-bold mb-4">
+                    {i + 1}
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{reason.title}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{reason.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 px-6 bg-slate-50">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold text-center text-slate-900 mb-4">
+              Atticus vs Curo Legal: Feature Comparison
+            </h2>
+            <p className="text-center text-slate-600 mb-12">
+              See how Atticus compares to Curo Legal for Ontario solo and small law firms —
+              complete Ontario practice management with integrated Canadian AI vs a billing and financial management tool.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+              <table className="w-full bg-white">
+                <thead>
+                  <tr className="bg-slate-900 text-white">
+                    <th className="text-left px-6 py-4 font-semibold">Feature</th>
+                    <th className="text-center px-6 py-4 font-semibold text-amber-400">Atticus</th>
+                    <th className="text-center px-6 py-4 font-semibold">Curo Legal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featureComparison.map((row, i) => (
+                    <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                      <td className="px-6 py-4 text-slate-700 font-medium">{row.feature}</td>
+                      <td className="px-6 py-4 text-center text-slate-700">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-green-600 font-bold">✓</span>
+                          <span className="text-sm">{row.atticus}</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-slate-500 text-sm">{row.curo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 px-6 bg-amber-50 border-t border-amber-100">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">
+              Complete Ontario Practice Management Built for Canadian Law
+            </h2>
+            <p className="text-slate-600 mb-8">
+              Atticus is built for Ontario from day one — LSO-compliant trust accounting, HST billing,
+              Canadian AI, limitation period tracking, and conflict checking.
+              $149 CAD per lawyer per month.
+            </p>
+            <Link
+              href="/sign-up"
+              className="inline-block bg-slate-900 text-white font-semibold px-10 py-4 rounded-lg hover:bg-slate-700 transition-colors"
+            >
+              Start Your Free Trial
+            </Link>
+          </div>
+        </section>
+
+        <section className="py-12 px-6 border-t border-slate-100">
+          <div className="max-w-4xl mx-auto">
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">Compare More Alternatives</h3>
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { href: "/clio-alternative", label: "Clio Alternative" },
+                { href: "/harvey-ai-alternative", label: "Harvey AI Alternative" },
+                { href: "/lexata-alternative", label: "Lexata Alternative" },
+                { href: "/ai-for-lawyers", label: "AI for Ontario Lawyers" },
+                { href: "/leap-alternative", label: "LEAP Alternative" },
+                { href: "/trust-accounting-ontario", label: "Ontario Trust Accounting" },
+              ].map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
