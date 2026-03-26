@@ -20,6 +20,11 @@ export async function retrieveChunks(
   limit: number = 8,
   matterId?: string
 ): Promise<RetrievedChunk[]> {
+  // BUG-3 FIX: Embedding an empty query produces a meaningless (or erroneous)
+  // similarity ranking. Short-circuit early so callers always get [] for empty
+  // queries rather than triggering a Voyage API call with no useful payload.
+  if (!query.trim()) return [];
+
   const queryEmbedding = await embedText(query);
 
   const conditions = [eq(documentChunks.userId, userId)];

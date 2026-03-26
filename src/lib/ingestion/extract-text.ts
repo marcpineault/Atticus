@@ -6,7 +6,10 @@ export async function extractText(
   buffer: Buffer,
   fileName: string
 ): Promise<string> {
-  const ext = fileName.split(".").pop()?.toLowerCase();
+  // "document".split(".").pop() returns "document" (not undefined) when there
+  // is no dot — explicitly check the extension differs from the full filename.
+  const raw = fileName.split(".").pop()?.toLowerCase();
+  const ext = raw !== fileName.toLowerCase() ? raw : undefined;
 
   if (!ext) {
     throw new Error("Cannot determine file type: no extension found");
@@ -14,6 +17,8 @@ export async function extractText(
 
   switch (ext) {
     case "pdf": {
+      // pdf-parse v2.x exports a named class PDFParse, not a default function.
+      // Correct API: new PDFParse({ data: buffer }).getText()
       try {
         const parser = new PDFParse({ data: buffer });
         const result = await parser.getText();
