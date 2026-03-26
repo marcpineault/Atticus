@@ -4,6 +4,8 @@ import { users } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 import { z } from "zod";
 
+const painFocusSchema = z.enum(["deadlines", "intake", "billing", "documents"]);
+
 export const usersRouter = createTRPCRouter({
   getSettings: protectedProcedure.query(async ({ ctx }) => {
     const [user] = await ctx.db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
@@ -67,6 +69,7 @@ export const usersRouter = createTRPCRouter({
       firmName: z.string().optional(),
       hourlyRate: z.number().int().min(0).max(10000).optional(),
       monthlyRevenueGoal: z.number().int().min(0).max(1000000).nullable().optional(),
+      painFocus: painFocusSchema.nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const [updated] = await ctx.db.update(users)
@@ -77,9 +80,15 @@ export const usersRouter = createTRPCRouter({
     }),
 
   completeOnboarding: protectedProcedure
-    .mutation(async ({ ctx }) => {
+    .input(z.object({
+      painFocus: painFocusSchema.optional(),
+    }).optional())
+    .mutation(async ({ ctx, input }) => {
       await ctx.db.update(users)
-        .set({ onboardingCompletedAt: new Date() })
+        .set({
+          onboardingCompletedAt: new Date(),
+          ...(input?.painFocus ? { painFocus: input.painFocus } : {}),
+        })
         .where(eq(users.id, ctx.userId));
     }),
 

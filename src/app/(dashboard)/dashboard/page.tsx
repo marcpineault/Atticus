@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Users, FileText, Clock, Loader2, AlertTriangle, CheckSquare, Circle, Briefcase, CalendarClock, MessageSquare, ArrowRight, Target } from "lucide-react";
 import { DocumentDetailDialog } from "@/components/documents/document-detail-dialog";
 import { QuickCapture } from "@/components/dashboard/quick-capture";
+import { SetupBanner } from "@/components/dashboard/setup-banner";
 
 const documentTypeLabels: Record<string, string> = {
   email: "Email",
@@ -88,6 +89,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <SetupBanner />
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
@@ -106,53 +109,6 @@ export default function DashboardPage() {
           </Link>
         </Button>
       </div>
-
-      {/* Onboarding checklist — shown only to new users with no data yet */}
-      {!isLoading && totalClients === 0 && totalDocuments === 0 && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Welcome to Atticus — let&apos;s get you set up</CardTitle>
-            <p className="text-sm text-muted-foreground">Three steps to get your first AI-powered briefing tomorrow morning.</p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              {
-                done: !!(userSettings?.firmName && userSettings?.name),
-                label: "Set your firm name and hourly rate",
-                href: "/settings",
-                cta: "Open Settings",
-              },
-              {
-                done: false,
-                label: "Add your first client",
-                href: "/clients",
-                cta: "Add Client",
-              },
-              {
-                done: false,
-                label: "Upload a document or meeting recording",
-                href: "/upload",
-                cta: "Upload",
-              },
-            ].map((step, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step.done ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}>
-                  {step.done ? "✓" : i + 1}
-                </div>
-                <span className={`flex-1 text-sm ${step.done ? "line-through text-muted-foreground" : ""}`}>{step.label}</span>
-                {!step.done && (
-                  <Button size="sm" variant="outline" asChild className="h-7 text-xs">
-                    <Link href={step.href}>{step.cta} →</Link>
-                  </Button>
-                )}
-              </div>
-            ))}
-            <p className="text-xs text-muted-foreground pt-1">
-              Once you upload a document, Atticus extracts deadlines and action items automatically — your first morning briefing arrives tomorrow at 9am.
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Atticus insight card */}
       {!isLoading && (totalClients > 0 || totalDocuments > 0) && (

@@ -78,6 +78,7 @@ export const users = pgTable("users", {
   trialEndsAt: timestamp("trial_ends_at"),
   monthlyRevenueGoal: integer("monthly_revenue_goal"), // target monthly revenue in dollars
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
+  painFocus: text("pain_focus"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
