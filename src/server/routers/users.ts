@@ -1,7 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { TRPCError } from "@trpc/server";
 import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 import { z } from "zod";
 
 export const usersRouter = createTRPCRouter({
@@ -35,11 +35,25 @@ export const usersRouter = createTRPCRouter({
         const [existing] = await ctx.db.select({ id: users.id })
           .from(users).where(eq(users.intakeEmail, intakeEmail)).limit(1);
         if (!existing) {
-          const [updated] = await ctx.db.update(users)
-            .set({ intakeEmail })
-            .where(eq(users.id, ctx.userId))
-            .returning();
-          return { intakeEmail: updated!.intakeEmail };
+          // Use isNull guard so a concurrent request that already wrote an
+          // email won't be overwritten. The DB UNIQUE constraint on intake_email
+          // is the final safety net against two users getting the same address.
+          try {
+            const [updated] = await ctx.db.update(users)
+              .set({ intakeEmail })
+              .where(and(eq(users.id, ctx.userId), isNull(users.intakeEmail)))
+              .returning();
+            if (updated) return { intakeEmail: updated.intakeEmail };
+            // Row matched 0 — concurrent request already set an email. Re-read.
+            const [current] = await ctx.db.select({ intakeEmail: users.intakeEmail })
+              .from(users).where(eq(users.id, ctx.userId)).limit(1);
+            if (current?.intakeEmail) return { intakeEmail: current.intakeEmail };
+          } catch (err: unknown) {
+            // Unique constraint violation (23505): two users raced to the same
+            // shortId. Fall through to generate a new one.
+            const pg = err as { code?: string };
+            if (pg?.code !== "23505") throw err;
+          }
         }
         attempts++;
       } while (attempts < 10);

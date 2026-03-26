@@ -65,7 +65,10 @@ export const ingestDocument = inngest.createFunction(
         Key: doc.r2Key,
       });
       const response = await r2Client.send(command);
-      const buffer = Buffer.from(await response.Body!.transformToByteArray());
+      if (!response.Body) {
+        throw new Error(`R2 object has no body for key: ${doc.r2Key}`);
+      }
+      const buffer = Buffer.from(await response.Body.transformToByteArray());
       const fileName = doc.r2Key.split("/").pop() ?? "file.txt";
 
       const text = await extractText(buffer, fileName);

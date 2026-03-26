@@ -33,7 +33,7 @@ export const documentsRouter = createTRPCRouter({
         errorMessage: documents.errorMessage,
         createdAt: documents.createdAt,
         updatedAt: documents.updatedAt,
-      }).from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt));
+      }).from(documents).where(and(...conditions)).orderBy(desc(documents.createdAt)).limit(500);
     }),
 
   getById: protectedProcedure

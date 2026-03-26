@@ -36,7 +36,10 @@ export const transcribeAudioFn = inngest.createFunction(
         Key: r2Key,
       });
       const response = await r2Client.send(command);
-      const buffer = Buffer.from(await response.Body!.transformToByteArray());
+      if (!response.Body) {
+        throw new Error(`R2 object has no body for key: ${r2Key}`);
+      }
+      const buffer = Buffer.from(await response.Body.transformToByteArray());
       const fileName = r2Key.split("/").pop() ?? "audio.mp3";
 
       return transcribeAudio(buffer, fileName);
