@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
+import { TRPCError } from "@trpc/server";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { stripe, STRIPE_PRICE_ID, APP_URL } from "@/lib/stripe/client";
@@ -22,7 +23,7 @@ export const billingRouter = createTRPCRouter({
     .mutation(async ({ ctx }) => {
       const [user] = await ctx.db.select().from(users)
         .where(eq(users.id, ctx.userId)).limit(1);
-      if (!user) throw new Error("User not found");
+      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 
       // Get or create Stripe customer
       let customerId = user.stripeCustomerId;
@@ -59,7 +60,7 @@ export const billingRouter = createTRPCRouter({
     .mutation(async ({ ctx }) => {
       const [user] = await ctx.db.select().from(users)
         .where(eq(users.id, ctx.userId)).limit(1);
-      if (!user?.stripeCustomerId) throw new Error("No billing account found");
+      if (!user?.stripeCustomerId) throw new TRPCError({ code: "BAD_REQUEST", message: "No billing account found" });
 
       const session = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,

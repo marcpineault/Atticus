@@ -1,6 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { documents, entities, documentChunks, clients } from "@/lib/db/schema";
 import { eq, and, desc, inArray, isNull, or } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDownloadUrl } from "@/lib/r2/signed-url";
 import { embedText } from "@/lib/ai/voyage";
@@ -41,8 +42,10 @@ export const documentsRouter = createTRPCRouter({
       const [doc] = await ctx.db.select().from(documents)
         .where(and(eq(documents.id, input.id), eq(documents.userId, ctx.userId)))
         .limit(1);
-      if (!doc) throw new Error("Document not found");
-      const docEntities = await ctx.db.select().from(entities).where(eq(entities.documentId, doc.id));
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
+      const docEntities = await ctx.db.select().from(entities).where(
+        and(eq(entities.documentId, doc.id), eq(entities.userId, ctx.userId))
+      );
       return { ...doc, entities: docEntities };
     }),
 
@@ -52,7 +55,7 @@ export const documentsRouter = createTRPCRouter({
       const [doc] = await ctx.db.select().from(documents)
         .where(and(eq(documents.id, input.id), eq(documents.userId, ctx.userId)))
         .limit(1);
-      if (!doc?.r2Key) throw new Error("Document not found or no file");
+      if (!doc?.r2Key) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found or no file" });
       const url = await getDownloadUrl(doc.r2Key);
       return { url };
     }),
@@ -156,7 +159,7 @@ export const documentsRouter = createTRPCRouter({
         .set({ title: input.title, updatedAt: new Date() })
         .where(and(eq(documents.id, input.id), eq(documents.userId, ctx.userId)))
         .returning();
-      if (!doc) throw new Error("Document not found");
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
       return doc;
     }),
 
@@ -178,7 +181,7 @@ export const documentsRouter = createTRPCRouter({
         .set({ clientId: input.clientId, matterId: input.matterId, updatedAt: new Date() })
         .where(and(eq(documents.id, input.id), eq(documents.userId, ctx.userId)))
         .returning();
-      if (!doc) throw new Error("Document not found");
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
       // Cascade assignment to entities extracted from this document
       await ctx.db.update(entities)
         .set({ clientId: input.clientId, matterId: input.matterId })
@@ -191,7 +194,7 @@ export const documentsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [entity] = await ctx.db.select()
         .from(entities).where(and(eq(entities.id, input.id), eq(entities.userId, ctx.userId))).limit(1);
-      if (!entity) throw new Error("Entity not found");
+      if (!entity) throw new TRPCError({ code: "NOT_FOUND", message: "Entity not found" });
       await ctx.db.update(entities).set({ resolved: input.resolved }).where(eq(entities.id, input.id));
       // Auto-create next occurrence when resolving a recurring entity
       if (input.resolved && entity.recurrenceType && entity.dueDate) {
@@ -327,7 +330,7 @@ export const documentsRouter = createTRPCRouter({
       const [doc] = await ctx.db.select().from(documents)
         .where(and(eq(documents.id, input.id), eq(documents.userId, ctx.userId)))
         .limit(1);
-      if (!doc) throw new Error("Document not found");
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found" });
       await ctx.db.update(documents)
         .set({ status: "pending", errorMessage: null, updatedAt: new Date() })
         .where(eq(documents.id, input.id));
@@ -373,7 +376,7 @@ export const documentsRouter = createTRPCRouter({
         clientId: input.clientId ?? null,
         matterId: input.matterId ?? null,
       }).returning();
-      if (!doc) throw new Error("Failed to create note");
+      if (!doc) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create note" });
       await inngest.send({
         name: "document/uploaded",
         data: { documentId: doc.id, userId: ctx.userId },

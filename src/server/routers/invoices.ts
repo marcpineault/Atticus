@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { z } from "zod";
 import { invoices, clients, matters, documents, users, timeEntries } from "@/lib/db/schema";
 import { eq, and, desc, isNull, inArray } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 
 export const invoicesRouter = createTRPCRouter({
@@ -253,8 +254,8 @@ export const invoicesRouter = createTRPCRouter({
         .where(and(eq(invoices.id, input.id), eq(invoices.userId, ctx.userId)))
         .limit(1);
 
-      if (!invoice) throw new Error("Invoice not found");
-      if (!invoice.clientEmail) throw new Error("Client has no email address");
+      if (!invoice) throw new TRPCError({ code: "NOT_FOUND", message: "Invoice not found" });
+      if (!invoice.clientEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "Client has no email address" });
 
       const hstRate = invoice.hstRate ?? 0;
       const hstAmount = invoice.hstAmount ?? 0;
@@ -350,7 +351,7 @@ export const invoicesRouter = createTRPCRouter({
       await ctx.db
         .update(invoices)
         .set({ status: "sent", sentAt: new Date() })
-        .where(eq(invoices.id, input.id));
+        .where(and(eq(invoices.id, input.id), eq(invoices.userId, ctx.userId)));
 
       return { sent: true };
     }),

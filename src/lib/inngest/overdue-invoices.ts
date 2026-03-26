@@ -1,9 +1,14 @@
 import { inngest } from "./client";
 import { db } from "@/lib/db";
 import { invoices, clients, users, matters } from "@/lib/db/schema";
-import { and, eq, lt, isNotNull, inArray } from "drizzle-orm";
+import { and, eq, lt, isNotNull, inArray, asc } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { APP_URL } from "@/lib/stripe/client";
+
+// Maximum rows fetched per page when scanning for overdue invoices.
+const OVERDUE_PAGE_SIZE = 200;
+// PostgreSQL IN clause degrades at very large sizes; chunk bulk updates.
+const UPDATE_CHUNK_SIZE = 500;
 
 export const markOverdueInvoices = inngest.createFunction(
   {
@@ -14,44 +19,73 @@ export const markOverdueInvoices = inngest.createFunction(
     ],
   },
   async ({ step }) => {
-    // Find sent invoices past due date
+    // Find sent invoices past due date — paginated to avoid loading every
+    // overdue invoice ever into memory in a single unbounded query.
     const overdueList = await step.run("find-overdue", async () => {
       const now = new Date();
-      return db
-        .select({
-          id: invoices.id,
-          invoiceNumber: invoices.invoiceNumber,
-          totalAmount: invoices.totalAmount,
-          dueDate: invoices.dueDate,
-          clientEmail: clients.email,
-          clientName: clients.name,
-          matterTitle: matters.title,
-          userEmail: users.email,
-          firmName: users.firmName,
-          userName: users.name,
-        })
-        .from(invoices)
-        .leftJoin(clients, eq(invoices.clientId, clients.id))
-        .leftJoin(users, eq(invoices.userId, users.id))
-        .leftJoin(matters, eq(invoices.matterId, matters.id))
-        .where(
-          and(
-            eq(invoices.status, "sent"),
-            lt(invoices.dueDate, now),
-            isNotNull(invoices.dueDate),
+      const rows: Array<{
+        id: string;
+        invoiceNumber: string;
+        totalAmount: number;
+        dueDate: Date | null;
+        clientEmail: string | null;
+        clientName: string | null;
+        matterTitle: string | null;
+        userEmail: string | null;
+        userId: string | null;
+        firmName: string | null;
+        userName: string | null;
+      }> = [];
+      let offset = 0;
+      while (true) {
+        const batch = await db
+          .select({
+            id: invoices.id,
+            invoiceNumber: invoices.invoiceNumber,
+            totalAmount: invoices.totalAmount,
+            dueDate: invoices.dueDate,
+            clientEmail: clients.email,
+            clientName: clients.name,
+            matterTitle: matters.title,
+            userEmail: users.email,
+            userId: users.id,
+            firmName: users.firmName,
+            userName: users.name,
+          })
+          .from(invoices)
+          .leftJoin(clients, eq(invoices.clientId, clients.id))
+          .leftJoin(users, eq(invoices.userId, users.id))
+          .leftJoin(matters, eq(invoices.matterId, matters.id))
+          .where(
+            and(
+              eq(invoices.status, "sent"),
+              lt(invoices.dueDate, now),
+              isNotNull(invoices.dueDate),
+            )
           )
-        );
+          .orderBy(asc(invoices.id))
+          .limit(OVERDUE_PAGE_SIZE)
+          .offset(offset);
+        rows.push(...batch);
+        if (batch.length < OVERDUE_PAGE_SIZE) break;
+        offset += OVERDUE_PAGE_SIZE;
+      }
+      return rows;
     });
 
     if (overdueList.length === 0) return { markedOverdue: 0 };
 
-    // Mark them all overdue in a single query
+    // Mark them all overdue — chunked to stay within safe IN-clause sizes.
     await step.run("mark-overdue", async () => {
       const ids = overdueList.map(i => i.id);
-      await db.update(invoices).set({ status: "overdue" }).where(inArray(invoices.id, ids));
+      for (let i = 0; i < ids.length; i += UPDATE_CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + UPDATE_CHUNK_SIZE);
+        await db.update(invoices).set({ status: "overdue" }).where(inArray(invoices.id, chunk));
+      }
     });
 
     // Send reminder emails to clients (where email available)
+    const now = new Date();
     let emailsSent = 0;
     for (const inv of overdueList) {
       if (!inv.clientEmail) continue;
@@ -88,17 +122,19 @@ export const markOverdueInvoices = inngest.createFunction(
       emailsSent++;
     }
 
-    // Notify lawyers — group overdue invoices by user email
+    // Notify lawyers — group overdue invoices by user ID (not email, to avoid
+    // step ID collisions from email addresses containing special characters).
     const byUser: Record<string, typeof overdueList> = {};
     for (const inv of overdueList) {
-      if (!inv.userEmail) continue;
-      const key = inv.userEmail;
+      if (!inv.userEmail || !inv.userId) continue;
+      const key = inv.userId;
       if (!byUser[key]) byUser[key] = [];
       byUser[key]!.push(inv);
     }
 
-    for (const [userEmail, userInvoices] of Object.entries(byUser)) {
+    for (const [userId, userInvoices] of Object.entries(byUser)) {
       const first = userInvoices[0]!;
+      if (!first.userEmail) continue;
       const firm = first.firmName ?? first.userName ?? "Your firm";
       const rows = userInvoices.map(inv => {
         const total = (inv.totalAmount / 100).toFixed(2);
@@ -113,10 +149,12 @@ export const markOverdueInvoices = inngest.createFunction(
         </tr>`;
       }).join("");
 
-      await step.run(`notify-lawyer-${userEmail}`, async () => {
+      // Step ID uses userId (UUID) — safe as a step key; email addresses can
+      // contain '+' and other chars that may cause Inngest step ID issues.
+      await step.run(`notify-lawyer-${userId}`, async () => {
         await resend.emails.send({
           from: FROM_EMAIL,
-          to: userEmail,
+          to: first.userEmail!,
           subject: `⚠️ ${userInvoices.length} invoice${userInvoices.length !== 1 ? "s" : ""} now overdue — Atticus`,
           html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">

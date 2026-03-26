@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { anthropic } from "@/lib/ai/anthropic";
 import { retrieveChunks } from "@/lib/ai/retrieve";
@@ -116,7 +117,7 @@ The lawyer will review and finalize the draft before sending.`;
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       return {
         draft: content.text,
@@ -150,7 +151,7 @@ The lawyer will review and finalize the draft before sending.`;
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
       return { answer: content.text };
     }),
 
@@ -167,8 +168,8 @@ The lawyer will review and finalize the draft before sending.`;
         .where(and(eq(clients.id, input.clientId), eq(clients.userId, ctx.userId)))
         .limit(1);
 
-      if (!client) throw new Error("Client not found");
-      if (!client.email) throw new Error("Client has no email address on file");
+      if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+      if (!client.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Client has no email address on file" });
 
       const [user] = await ctx.db
         .select({ name: users.name, firmName: users.firmName, email: users.email })
@@ -249,7 +250,7 @@ The lawyer will review and finalize the draft before sending.`;
         .where(and(eq(matters.id, input.matterId), eq(matters.userId, ctx.userId)))
         .limit(1);
 
-      if (!matter) throw new Error("Matter not found");
+      if (!matter) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
 
       const [client] = await ctx.db
         .select({ name: clients.name, email: clients.email })
@@ -295,7 +296,7 @@ Keep it concise — 3-5 paragraphs. Write directly to the client, addressed to t
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       return {
         report: content.text,
@@ -319,7 +320,7 @@ Keep it concise — 3-5 paragraphs. Write directly to the client, addressed to t
         .where(and(eq(matters.id, input.matterId), eq(matters.userId, ctx.userId)))
         .limit(1);
 
-      if (!matter) throw new Error("Matter not found");
+      if (!matter) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
 
       const [client] = await ctx.db
         .select({ name: clients.name, email: clients.email })
@@ -327,8 +328,8 @@ Keep it concise — 3-5 paragraphs. Write directly to the client, addressed to t
         .where(and(eq(clients.id, matter.clientId), eq(clients.userId, ctx.userId)))
         .limit(1);
 
-      if (!client) throw new Error("Client not found");
-      if (!client.email) throw new Error("Client has no email address on file");
+      if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
+      if (!client.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Client has no email address on file" });
 
       const [user] = await ctx.db
         .select({ name: users.name, firmName: users.firmName, email: users.email })
@@ -362,7 +363,7 @@ Write the body of a brief, professional email requesting this document.`,
       });
 
       const draftContent = draftMsg.content[0];
-      if (!draftContent || draftContent.type !== "text") throw new Error("Unexpected AI response");
+      if (!draftContent || draftContent.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       const subject = `Document Request — ${matter.title}`;
       const bodyText = `Dear ${firstName},\n\n${draftContent.text}${dueDateStr}\n\nThank you,\n${senderName}`;

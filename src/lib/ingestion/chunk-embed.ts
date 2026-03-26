@@ -12,6 +12,9 @@ interface Chunk {
 }
 
 export function splitIntoChunks(text: string): string[] {
+  // Skip empty or whitespace-only text.
+  if (!text.trim()) return [];
+
   const chunkChars = CHUNK_SIZE * CHARS_PER_TOKEN;
   const overlapChars = CHUNK_OVERLAP * CHARS_PER_TOKEN;
   const chunks: string[] = [];
@@ -19,7 +22,11 @@ export function splitIntoChunks(text: string): string[] {
   let start = 0;
   while (start < text.length) {
     const end = Math.min(start + chunkChars, text.length);
-    chunks.push(text.slice(start, end));
+    const chunk = text.slice(start, end);
+    // Don't store chunks that are purely whitespace.
+    if (chunk.trim()) {
+      chunks.push(chunk);
+    }
     if (end === text.length) break;
     start = end - overlapChars;
   }
@@ -39,13 +46,29 @@ export async function chunkAndEmbed(text: string): Promise<Chunk[]> {
 
   for (let i = 0; i < textChunks.length; i += BATCH_SIZE) {
     const batch = textChunks.slice(i, i + BATCH_SIZE);
-    const embeddings = await embedTexts(batch);
-    allEmbeddings.push(...embeddings);
+    const batchEmbeddings = await embedTexts(batch);
+
+    // Guard against Voyage returning a different number of embeddings than inputs.
+    if (batchEmbeddings.length !== batch.length) {
+      throw new Error(
+        `Voyage AI returned ${batchEmbeddings.length} embeddings for ${batch.length} chunks in batch starting at index ${i}`
+      );
+    }
+
+    allEmbeddings.push(...batchEmbeddings);
+  }
+
+  // Final sanity check before mapping.
+  if (allEmbeddings.length !== textChunks.length) {
+    throw new Error(
+      `Embedding count mismatch: expected ${textChunks.length}, got ${allEmbeddings.length}`
+    );
   }
 
   return textChunks.map((content, index) => ({
     content,
     chunkIndex: index,
+    // Safe to assert non-null here: the length check above guarantees alignment.
     embedding: allEmbeddings[index]!,
   }));
 }

@@ -13,22 +13,28 @@ const TYPE_CONTEXT: Record<string, string> = {
 export async function summarizeDocument(text: string, documentType?: string): Promise<string> {
   const typeContext = documentType ? (TYPE_CONTEXT[documentType] ?? "") : "";
 
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 300,
-    system: `You are a legal document analyst. ${typeContext} Provide a 2-3 sentence summary optimized for legal context. Focus on key parties, issues, dates, and obligations.`,
-    messages: [
-      {
-        role: "user",
-        content: text.slice(0, 15000),
-      },
-    ],
-  });
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      system: `You are a legal document analyst. ${typeContext} Provide a 2-3 sentence summary optimized for legal context. Focus on key parties, issues, dates, and obligations.`,
+      messages: [
+        {
+          role: "user",
+          content: text.slice(0, 15000),
+        },
+      ],
+    });
 
-  const content = message.content[0];
-  if (!content || content.type !== "text") {
-    throw new Error("Unexpected response type from Claude");
+    const content = message.content[0];
+    if (!content || content.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
+    }
+
+    return content.text;
+  } catch (err) {
+    throw new Error(
+      `Summarization failed: ${err instanceof Error ? err.message : "Claude API error"}`
+    );
   }
-
-  return content.text;
 }

@@ -1,14 +1,19 @@
 import { inngest } from "./client";
 import { db } from "@/lib/db";
 import { entities, documents, clients, users } from "@/lib/db/schema";
-import { eq, and, inArray, isNull, or, gte, count } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, gte, count, asc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { APP_URL } from "@/lib/stripe/client";
 
+const WEEKLY_DIGEST_USER_BATCH_SIZE = 100;
+
 export const weeklyDigest = inngest.createFunction(
   {
     id: "weekly-digest",
+    // No function-level retries: email send steps carry a Resend idempotency
+    // key, so step-level replays are safe, but a full function re-run would
+    // re-send digests to users already processed earlier in the same run.
     triggers: [
       { event: "digest/weekly" },
       {
@@ -17,25 +22,46 @@ export const weeklyDigest = inngest.createFunction(
     ],
   },
   async ({ step }) => {
+    // Paginated user fetch — stable order prevents skips/duplicates across pages.
     const activeUsers = await step.run("fetch-users", async () => {
-      return db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          subscriptionStatus: users.subscriptionStatus,
-          emailWeeklyDigest: users.emailWeeklyDigest,
-        })
-        .from(users)
-        .where(
-          or(
-            inArray(users.subscriptionStatus, ["active", "trialing"]),
-            isNull(users.subscriptionStatus),
-          )!
-        );
+      const rows: Array<{
+        id: string;
+        email: string | null;
+        name: string | null;
+        subscriptionStatus: string | null;
+        emailWeeklyDigest: boolean | null;
+      }> = [];
+      let offset = 0;
+      while (true) {
+        const batch = await db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            subscriptionStatus: users.subscriptionStatus,
+            emailWeeklyDigest: users.emailWeeklyDigest,
+          })
+          .from(users)
+          .where(
+            or(
+              inArray(users.subscriptionStatus, ["active", "trialing"]),
+              isNull(users.subscriptionStatus),
+            )
+          )
+          .orderBy(asc(users.id))
+          .limit(WEEKLY_DIGEST_USER_BATCH_SIZE)
+          .offset(offset);
+        rows.push(...batch);
+        if (batch.length < WEEKLY_DIGEST_USER_BATCH_SIZE) break;
+        offset += WEEKLY_DIGEST_USER_BATCH_SIZE;
+      }
+      return rows;
     });
 
-    const nextWeekEnd = new Date();
+    // Stable "now" and derived timestamps for the entire run — avoids the
+    // overdue/upcoming filter boundary drifting as the loop runs.
+    const now = new Date();
+    const nextWeekEnd = new Date(now);
     nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
 
     let sent = 0;
@@ -79,8 +105,10 @@ export const weeklyDigest = inngest.createFunction(
 
       const { docsThisWeek, openDeadlines } = stats;
 
-      const overdue = openDeadlines.filter(d => d.dueDate && new Date(d.dueDate) < new Date());
-      const upcoming = openDeadlines.filter(d => d.dueDate && new Date(d.dueDate) >= new Date() && new Date(d.dueDate) <= nextWeekEnd);
+      // Use the stable `now` captured before the loop — not `new Date()` inside
+      // the filter, which would drift across a long-running job.
+      const overdue = openDeadlines.filter(d => d.dueDate && new Date(d.dueDate) < now);
+      const upcoming = openDeadlines.filter(d => d.dueDate && new Date(d.dueDate) >= now && new Date(d.dueDate) <= nextWeekEnd);
 
       // Skip if nothing to report
       if (docsThisWeek === 0 && overdue.length === 0 && upcoming.length === 0) continue;
@@ -165,12 +193,19 @@ export const weeklyDigest = inngest.createFunction(
 </body></html>`;
 
       await step.run(`send-${user.id}`, async () => {
+        // Idempotency key scoped to user + ISO week (Mon-Sun) so a step replay
+        // within the same week doesn't produce a duplicate digest email.
+        const weekStart = new Date(now);
+        weekStart.setUTCDate(now.getUTCDate() - now.getUTCDay()); // Sunday
+        const weekKey = weekStart.toISOString().slice(0, 10);
+        const idempotencyKey = `weekly-digest:${user.id}:${weekKey}`;
         await resend.emails.send({
           from: FROM_EMAIL,
           to: user.email!,
           subject: `Your week ahead${overdue.length > 0 ? ` — ${overdue.length} overdue` : upcoming.length > 0 ? ` — ${upcoming.length} upcoming deadline${upcoming.length !== 1 ? "s" : ""}` : " — clear schedule"}`,
           html,
           text: `Hi ${firstName},\n\nYour week ahead:\n- ${docsThisWeek} documents processed this week\n- ${overdue.length} overdue items\n- ${upcoming.length} due in the next 7 days\n\nView details: ${APP_URL}/deadlines`,
+          headers: { "Idempotency-Key": idempotencyKey },
         });
       });
 

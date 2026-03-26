@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { documents } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { r2Client, R2_BUCKET } from "@/lib/r2/client";
+import { r2Client, getR2Bucket } from "@/lib/r2/client";
 import { transcribeAudio } from "@/lib/ingestion/transcribe";
 
 export const transcribeAudioFn = inngest.createFunction(
@@ -32,7 +32,7 @@ export const transcribeAudioFn = inngest.createFunction(
 
     const transcription = await step.run("transcribe", async () => {
       const command = new GetObjectCommand({
-        Bucket: R2_BUCKET,
+        Bucket: getR2Bucket(),
         Key: r2Key,
       });
       const response = await r2Client.send(command);

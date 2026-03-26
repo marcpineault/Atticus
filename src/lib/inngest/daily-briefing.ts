@@ -1,14 +1,19 @@
 import { inngest } from "./client";
 import { db } from "@/lib/db";
 import { entities, documents, clients, users, invoices, trustTransactions } from "@/lib/db/schema";
-import { eq, and, inArray, isNull, or } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, asc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { buildDailyBriefingEmail } from "@/lib/email/templates";
 
+const DAILY_BRIEFING_USER_BATCH_SIZE = 100;
+
 export const dailyBriefing = inngest.createFunction(
   {
     id: "daily-briefing",
+    // retries is intentionally left at the default (0 function-level retries).
+    // Each step retries independently. The email send steps use a Resend
+    // idempotency key so a step replay cannot produce duplicate emails.
     triggers: [
       { event: "briefing/send" }, // for manual/test triggers
       {
@@ -18,25 +23,46 @@ export const dailyBriefing = inngest.createFunction(
   },
   async ({ step }) => {
     // Fetch all users who have email set and a subscription (or are trialing)
+    // Paginated to avoid loading unbounded rows into memory
     const activeUsers = await step.run("fetch-users", async () => {
-      return db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          subscriptionStatus: users.subscriptionStatus,
-          emailDailyBriefing: users.emailDailyBriefing,
-          hourlyRate: users.hourlyRate,
-        })
-        .from(users)
-        .where(
-          or(
-            inArray(users.subscriptionStatus, ["active", "trialing"]),
-            isNull(users.subscriptionStatus), // include users before billing is set up
-          )!
-        );
+      const rows: Array<{
+        id: string;
+        email: string | null;
+        name: string | null;
+        subscriptionStatus: string | null;
+        emailDailyBriefing: boolean | null;
+        hourlyRate: number | null;
+      }> = [];
+      let offset = 0;
+      while (true) {
+        const batch = await db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            subscriptionStatus: users.subscriptionStatus,
+            emailDailyBriefing: users.emailDailyBriefing,
+            hourlyRate: users.hourlyRate,
+          })
+          .from(users)
+          .where(
+            or(
+              inArray(users.subscriptionStatus, ["active", "trialing"]),
+              isNull(users.subscriptionStatus), // include users before billing is set up
+            )
+          )
+          .orderBy(asc(users.id))
+          .limit(DAILY_BRIEFING_USER_BATCH_SIZE)
+          .offset(offset);
+        rows.push(...batch);
+        if (batch.length < DAILY_BRIEFING_USER_BATCH_SIZE) break;
+        offset += DAILY_BRIEFING_USER_BATCH_SIZE;
+      }
+      return rows;
     });
 
+    // Stable timestamps for the entire run — computed once inside the step so
+    // retries don't shift the window.
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
@@ -162,12 +188,18 @@ export const dailyBriefing = inngest.createFunction(
       });
 
       await step.run(`send-email-${user.id}`, async () => {
+        // Idempotency key scoped to user + UTC date: if this step is replayed
+        // on the same day (e.g. transient Inngest failure after Resend accepted
+        // the message), Resend deduplicates the send and we don't double-email.
+        const utcDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+        const idempotencyKey = `daily-briefing:${user.id}:${utcDate}`;
         await resend.emails.send({
           from: FROM_EMAIL,
           to: user.email!,
           subject: `Your morning briefing${overdue.length > 0 ? ` ⚠️ ${overdue.length} overdue` : today.length > 0 ? ` — ${today.length} due today` : ""}`,
           html,
           text,
+          headers: { "Idempotency-Key": idempotencyKey },
         });
       });
 

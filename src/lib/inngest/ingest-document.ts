@@ -6,7 +6,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { buildDocumentReadyEmail } from "@/lib/email/templates";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { r2Client, R2_BUCKET } from "@/lib/r2/client";
+import { r2Client, getR2Bucket } from "@/lib/r2/client";
 import { extractText } from "@/lib/ingestion/extract-text";
 import { extractEntities } from "@/lib/ingestion/extract-entities";
 import { chunkAndEmbed } from "@/lib/ingestion/chunk-embed";
@@ -61,7 +61,7 @@ export const ingestDocument = inngest.createFunction(
       if (!doc.r2Key) throw new Error("No R2 key for document");
 
       const command = new GetObjectCommand({
-        Bucket: R2_BUCKET,
+        Bucket: getR2Bucket(),
         Key: doc.r2Key,
       });
       const response = await r2Client.send(command);

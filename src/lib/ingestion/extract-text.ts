@@ -8,20 +8,42 @@ export async function extractText(
 ): Promise<string> {
   const ext = fileName.split(".").pop()?.toLowerCase();
 
+  if (!ext) {
+    throw new Error("Cannot determine file type: no extension found");
+  }
+
   switch (ext) {
     case "pdf": {
-      const parser = new PDFParse({ data: buffer });
-      const result = await parser.getText();
-      return result.text;
+      try {
+        const parser = new PDFParse({ data: buffer });
+        const result = await parser.getText();
+        return result.text;
+      } catch (err) {
+        throw new Error(
+          `Failed to parse PDF: ${err instanceof Error ? err.message : "unknown error"}`
+        );
+      }
     }
     case "docx": {
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value;
+      try {
+        const result = await mammoth.extractRawText({ buffer });
+        return result.value;
+      } catch (err) {
+        throw new Error(
+          `Failed to parse DOCX: ${err instanceof Error ? err.message : "unknown error"}`
+        );
+      }
     }
     case "txt": {
-      return buffer.toString("utf-8");
+      try {
+        return buffer.toString("utf-8");
+      } catch (err) {
+        throw new Error(
+          `Failed to read text file: ${err instanceof Error ? err.message : "unknown error"}`
+        );
+      }
     }
     default:
-      throw new Error(`Unsupported file type: ${ext}`);
+      throw new Error(`Unsupported file type: .${ext}`);
   }
 }

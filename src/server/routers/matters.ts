@@ -1,6 +1,7 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { matters, documents, entities, timeEntries, trustTransactions, clients, users } from "@/lib/db/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
@@ -250,7 +251,7 @@ export const mattersRouter = createTRPCRouter({
         .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId)))
         .limit(1);
       const matter = rows[0];
-      if (!matter) throw new Error("Matter not found");
+      if (!matter) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
       return matter;
     }),
 
@@ -280,7 +281,7 @@ export const mattersRouter = createTRPCRouter({
         .insert(matters)
         .values({ userId: ctx.userId, ...matterInput })
         .returning();
-      if (!matter) throw new Error("Failed to create matter");
+      if (!matter) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create matter" });
 
       if (template) {
         await ctx.db.insert(entities).values(
@@ -327,14 +328,14 @@ export const mattersRouter = createTRPCRouter({
         .from(matters)
         .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId)))
         .limit(1);
-      if (!existing) throw new Error("Matter not found");
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
       if (existing.portalToken) return { token: existing.portalToken };
 
       const token = randomBytes(16).toString("hex");
       await ctx.db
         .update(matters)
         .set({ portalToken: token })
-        .where(eq(matters.id, input.id));
+        .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId)));
       return { token };
     }),
 
@@ -352,14 +353,14 @@ export const mattersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const [matter] = await ctx.db.select().from(matters)
         .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId))).limit(1);
-      if (!matter) throw new Error("Matter not found");
+      if (!matter) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
 
       const matterDocs = await ctx.db
         .select({ title: documents.title, summary: documents.summary, type: documents.type, createdAt: documents.createdAt })
         .from(documents)
         .where(and(eq(documents.matterId, input.id), eq(documents.userId, ctx.userId), eq(documents.status, "completed")));
 
-      if (matterDocs.length === 0) throw new Error("No processed documents for this matter");
+      if (matterDocs.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No processed documents for this matter" });
 
       const docContext = matterDocs
         .map(d => `[${d.type.toUpperCase()} — ${new Date(d.createdAt).toLocaleDateString()}] ${d.title ?? "Untitled"}: ${d.summary ?? "No summary"}`)
@@ -373,11 +374,11 @@ export const mattersRouter = createTRPCRouter({
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       const [updated] = await ctx.db.update(matters)
         .set({ summary: content.text, updatedAt: new Date() })
-        .where(eq(matters.id, input.id))
+        .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId)))
         .returning();
       return updated!;
     }),
@@ -472,17 +473,17 @@ export const mattersRouter = createTRPCRouter({
         .where(and(eq(matters.id, input.id), eq(matters.userId, ctx.userId)))
         .limit(1);
 
-      if (!matter) throw new Error("Matter not found");
-      if (!matter.portalToken) throw new Error("No portal link. Generate a portal link first.");
-      if (!matter.clientId) throw new Error("No client linked to this matter.");
+      if (!matter) throw new TRPCError({ code: "NOT_FOUND", message: "Matter not found" });
+      if (!matter.portalToken) throw new TRPCError({ code: "BAD_REQUEST", message: "No portal link. Generate a portal link first." });
+      if (!matter.clientId) throw new TRPCError({ code: "BAD_REQUEST", message: "No client linked to this matter." });
 
       const [client] = await ctx.db
         .select({ name: clients.name, email: clients.email })
         .from(clients)
-        .where(eq(clients.id, matter.clientId))
+        .where(and(eq(clients.id, matter.clientId), eq(clients.userId, ctx.userId)))
         .limit(1);
 
-      if (!client?.email) throw new Error("Client has no email address on file.");
+      if (!client?.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Client has no email address on file." });
 
       const [lawyer] = await ctx.db
         .select({ name: users.name, firmName: users.firmName })

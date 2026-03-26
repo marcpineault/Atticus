@@ -1,14 +1,19 @@
 import { inngest } from "./client";
 import { db } from "@/lib/db";
 import { entities, documents, clients, users } from "@/lib/db/schema";
-import { eq, and, inArray, isNull, or, gte, lt } from "drizzle-orm";
+import { eq, and, inArray, isNull, or, gte, lt, asc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { buildDeadlineAlertEmail } from "@/lib/email/templates";
 
+const ESCALATION_USER_BATCH_SIZE = 100;
+
 export const deadlineEscalation = inngest.createFunction(
   {
     id: "deadline-escalation",
+    // No function-level retries: email send steps carry a Resend idempotency
+    // key, so step-level replays are safe, but a full function re-run after
+    // partial completion could re-send alerts to users processed earlier.
     triggers: [
       { event: "deadline/escalation" },
       {
@@ -17,24 +22,43 @@ export const deadlineEscalation = inngest.createFunction(
     ],
   },
   async ({ step }) => {
+    // Paginated user fetch — stable order prevents skips/duplicates across pages.
     const activeUsers = await step.run("fetch-users", async () => {
-      return db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          emailDailyBriefing: users.emailDailyBriefing,
-          subscriptionStatus: users.subscriptionStatus,
-        })
-        .from(users)
-        .where(
-          or(
-            inArray(users.subscriptionStatus, ["active", "trialing"]),
-            isNull(users.subscriptionStatus),
-          )!
-        );
+      const rows: Array<{
+        id: string;
+        email: string | null;
+        name: string | null;
+        emailDailyBriefing: boolean | null;
+        subscriptionStatus: string | null;
+      }> = [];
+      let offset = 0;
+      while (true) {
+        const batch = await db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            emailDailyBriefing: users.emailDailyBriefing,
+            subscriptionStatus: users.subscriptionStatus,
+          })
+          .from(users)
+          .where(
+            or(
+              inArray(users.subscriptionStatus, ["active", "trialing"]),
+              isNull(users.subscriptionStatus),
+            )
+          )
+          .orderBy(asc(users.id))
+          .limit(ESCALATION_USER_BATCH_SIZE)
+          .offset(offset);
+        rows.push(...batch);
+        if (batch.length < ESCALATION_USER_BATCH_SIZE) break;
+        offset += ESCALATION_USER_BATCH_SIZE;
+      }
+      return rows;
     });
 
+    // Stable timestamps for the entire run.
     const now = new Date();
     const todayStart = new Date(now);
     todayStart.setHours(0, 0, 0, 0);
@@ -101,6 +125,10 @@ export const deadlineEscalation = inngest.createFunction(
         });
 
         const urgentCount = todayDeadlines.length;
+        // Idempotency key scoped to user + UTC date so step replays on the
+        // same day don't produce duplicate alert emails.
+        const utcDate = now.toISOString().slice(0, 10);
+        const idempotencyKey = `deadline-escalation:${user.id}:${utcDate}`;
         await resend.emails.send({
           from: FROM_EMAIL,
           to: user.email!,
@@ -109,6 +137,7 @@ export const deadlineEscalation = inngest.createFunction(
             : `📅 ${deadlines.length} deadline${deadlines.length !== 1 ? "s" : ""} due in the next 3 days — Atticus`,
           html,
           text,
+          headers: { "Idempotency-Key": idempotencyKey },
         });
       });
 

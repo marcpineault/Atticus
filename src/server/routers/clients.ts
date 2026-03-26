@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { clients, documents, entities } from "@/lib/db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { anthropic } from "@/lib/ai/anthropic";
 
 const createClientSchema = z.object({
@@ -72,7 +73,7 @@ export const clientsRouter = createTRPCRouter({
         .from(clients)
         .where(and(eq(clients.id, input.id), eq(clients.userId, ctx.userId)))
         .limit(1);
-      if (!client) throw new Error("Client not found");
+      if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
       return client;
     }),
 
@@ -114,14 +115,14 @@ export const clientsRouter = createTRPCRouter({
         .from(clients)
         .where(and(eq(clients.id, input.id), eq(clients.userId, ctx.userId)))
         .limit(1);
-      if (!client) throw new Error("Client not found");
+      if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "Client not found" });
 
       const clientDocs = await ctx.db
         .select({ title: documents.title, summary: documents.summary, type: documents.type, createdAt: documents.createdAt })
         .from(documents)
         .where(and(eq(documents.clientId, input.id), eq(documents.userId, ctx.userId), eq(documents.status, "completed")));
 
-      if (clientDocs.length === 0) throw new Error("No processed documents for this client");
+      if (clientDocs.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No processed documents for this client" });
 
       const docContext = clientDocs
         .map(d => `[${d.type.toUpperCase()} — ${new Date(d.createdAt).toLocaleDateString()}] ${d.title ?? "Untitled"}: ${d.summary ?? "No summary"}`)
@@ -135,12 +136,12 @@ export const clientsRouter = createTRPCRouter({
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       const [updated] = await ctx.db
         .update(clients)
         .set({ summary: content.text, updatedAt: new Date() })
-        .where(eq(clients.id, input.id))
+        .where(and(eq(clients.id, input.id), eq(clients.userId, ctx.userId)))
         .returning();
       return updated!;
     }),
@@ -214,7 +215,7 @@ ${personList || "(none)"}`,
       });
 
       const content = message.content[0];
-      if (!content || content.type !== "text") throw new Error("Unexpected response");
+      if (!content || content.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       try {
         const parsed = JSON.parse(content.text) as {

@@ -54,12 +54,24 @@ function extractName(raw: string): string | null {
 
 export async function POST(req: NextRequest) {
   // --- 1. Signature verification (Resend uses Svix) ---
-  const rawBody = await req.text();
-  const verified = verifyResendWebhook(rawBody, {
-    svixId: req.headers.get("svix-id"),
-    svixTimestamp: req.headers.get("svix-timestamp"),
-    svixSignature: req.headers.get("svix-signature"),
-  });
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Failed to read body" }, { status: 400 });
+  }
+
+  let verified: ReturnType<typeof verifyResendWebhook>;
+  try {
+    verified = verifyResendWebhook(rawBody, {
+      svixId: req.headers.get("svix-id"),
+      svixTimestamp: req.headers.get("svix-timestamp"),
+      svixSignature: req.headers.get("svix-signature"),
+    });
+  } catch (err) {
+    console.error("[email-intake] Webhook verification threw:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
   if (!verified) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });

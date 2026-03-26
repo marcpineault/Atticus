@@ -35,24 +35,52 @@ export async function extractEntities(
     ? `${BASE_PROMPT}\n\n${typeInstruction}`
     : BASE_PROMPT;
 
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages: [
-      {
-        role: "user",
-        content: text.slice(0, 15000),
-      },
-    ],
-  });
+  let rawResponseText: string;
+  try {
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: text.slice(0, 15000),
+        },
+      ],
+    });
 
-  const content = message.content[0];
-  if (!content || content.type !== "text") {
-    throw new Error("Unexpected response type from Claude");
+    const content = message.content[0];
+    if (!content || content.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
+    }
+
+    rawResponseText = content.text;
+  } catch (err) {
+    // Re-throw with a generic message so the Anthropic response body (which
+    // may contain request context) is not propagated into logs verbatim.
+    throw new Error(
+      `Entity extraction failed: ${err instanceof Error ? err.message : "Claude API error"}`
+    );
   }
 
-  const raw = content.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
-  const parsed = JSON.parse(raw) as unknown;
-  return extractedEntitiesSchema.parse(parsed);
+  // Strip optional markdown code fences that the model sometimes adds.
+  const raw = rawResponseText
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Entity extraction returned non-JSON response from Claude");
+  }
+
+  try {
+    return extractedEntitiesSchema.parse(parsed);
+  } catch (err) {
+    throw new Error(
+      `Entity extraction response failed validation: ${err instanceof Error ? err.message : "schema error"}`
+    );
+  }
 }

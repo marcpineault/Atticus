@@ -6,12 +6,24 @@ import { anthropic } from "@/lib/ai/anthropic";
 import { verifyResendWebhook } from "@/lib/email/verify-webhook";
 
 export async function POST(req: NextRequest) {
-  const rawBody = await req.text();
-  const verified = verifyResendWebhook(rawBody, {
-    svixId: req.headers.get("svix-id"),
-    svixTimestamp: req.headers.get("svix-timestamp"),
-    svixSignature: req.headers.get("svix-signature"),
-  });
+  let rawBody: string;
+  try {
+    rawBody = await req.text();
+  } catch {
+    return NextResponse.json({ error: "Failed to read body" }, { status: 400 });
+  }
+
+  let verified: ReturnType<typeof verifyResendWebhook>;
+  try {
+    verified = verifyResendWebhook(rawBody, {
+      svixId: req.headers.get("svix-id"),
+      svixTimestamp: req.headers.get("svix-timestamp"),
+      svixSignature: req.headers.get("svix-signature"),
+    });
+  } catch (err) {
+    console.error("[outreach-inbound] Webhook verification threw:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
   if (!verified) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
@@ -29,28 +41,45 @@ export async function POST(req: NextRequest) {
 
   const sendId = match[1]!;
 
-  const [send] = await db
-    .select()
-    .from(campaignSends)
-    .where(eq(campaignSends.id, sendId))
-    .limit(1);
+  let send: typeof import("@/lib/db/schema").campaignSends.$inferSelect | undefined;
+  try {
+    const [row] = await db
+      .select()
+      .from(campaignSends)
+      .where(eq(campaignSends.id, sendId))
+      .limit(1);
+    send = row;
+  } catch (err) {
+    console.error("[outreach-inbound] DB lookup failed:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
   if (!send) return NextResponse.json({ ok: true });
 
-  // Update send status to replied
-  await db
-    .update(campaignSends)
-    .set({ status: "replied", repliedAt: new Date() })
-    .where(eq(campaignSends.id, sendId));
+  // If already marked replied, this is a duplicate delivery — ack and skip.
+  if (send.status === "replied") return NextResponse.json({ ok: true });
 
-  // Update campaign reply count (use sql increment)
-  await db
-    .update(campaigns)
-    .set({
-      totalReplied: sql`${campaigns.totalReplied} + 1`,
-      updatedAt: new Date(),
-    })
-    .where(eq(campaigns.id, send.campaignId));
+  try {
+    // Wrap both writes in a transaction so a partial failure doesn't
+    // permanently lose the campaign counter increment on Resend's retry.
+    await db.transaction(async (tx) => {
+      await tx
+        .update(campaignSends)
+        .set({ status: "replied", repliedAt: new Date() })
+        .where(eq(campaignSends.id, sendId));
+
+      await tx
+        .update(campaigns)
+        .set({
+          totalReplied: sql`${campaigns.totalReplied} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(campaigns.id, send.campaignId));
+    });
+  } catch (err) {
+    console.error("[outreach-inbound] DB update failed:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
   // Classify reply sentiment with Claude Haiku
   try {

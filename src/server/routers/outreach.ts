@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
+import { TRPCError } from "@trpc/server";
 import {
   campaigns,
   campaignSteps,
@@ -445,7 +446,7 @@ export const outreachRouter = createTRPCRouter({
           and(eq(campaigns.id, input.id), eq(campaigns.userId, ctx.userId))
         )
         .limit(1);
-      if (!campaign) throw new Error("Campaign not found");
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
       const steps = await ctx.db
         .select()
@@ -480,19 +481,19 @@ export const outreachRouter = createTRPCRouter({
         })
         .returning();
 
-      // If template selected, populate steps
+      // If template selected, populate steps in a single bulk insert
       if (input.templateKey && EMAIL_SEQUENCES[input.templateKey]) {
         const seq = EMAIL_SEQUENCES[input.templateKey]!;
-        for (const step of seq.steps) {
-          await ctx.db.insert(campaignSteps).values({
+        await ctx.db.insert(campaignSteps).values(
+          seq.steps.map((step, i) => ({
             campaignId: campaign!.id,
-            stepNumber: seq.steps.indexOf(step) + 1,
+            stepNumber: i + 1,
             channel: step.channel,
             subject: step.subject,
             body: step.body,
             delayDays: step.delayDays,
-          });
-        }
+          }))
+        );
       }
 
       return campaign;
@@ -518,7 +519,7 @@ export const outreachRouter = createTRPCRouter({
           and(eq(campaigns.id, id), eq(campaigns.userId, ctx.userId))
         )
         .returning();
-      if (!updated) throw new Error("Campaign not found");
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
       return updated;
     }),
 
@@ -558,9 +559,11 @@ export const outreachRouter = createTRPCRouter({
           )
         )
         .limit(1);
-      if (!campaign) throw new Error("Campaign not found");
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
       if (input.id) {
+        // Include campaignId in the WHERE so a caller cannot update a step
+        // belonging to a different campaign by supplying a foreign step id.
         const [updated] = await ctx.db
           .update(campaignSteps)
           .set({
@@ -570,7 +573,7 @@ export const outreachRouter = createTRPCRouter({
             stepNumber: input.stepNumber,
             channel: input.channel,
           })
-          .where(eq(campaignSteps.id, input.id))
+          .where(and(eq(campaignSteps.id, input.id), eq(campaignSteps.campaignId, input.campaignId)))
           .returning();
         return updated;
       }
@@ -599,7 +602,7 @@ export const outreachRouter = createTRPCRouter({
         .innerJoin(campaigns, eq(campaignSteps.campaignId, campaigns.id))
         .where(and(eq(campaignSteps.id, input.id), eq(campaigns.userId, ctx.userId)))
         .limit(1);
-      if (!step) throw new Error("Step not found");
+      if (!step) throw new TRPCError({ code: "NOT_FOUND", message: "Step not found" });
       await ctx.db.delete(campaignSteps).where(eq(campaignSteps.id, input.id));
     }),
 
@@ -618,7 +621,7 @@ export const outreachRouter = createTRPCRouter({
     .input(
       z.object({
         campaignId: z.string().uuid(),
-        prospectIds: z.array(z.string().uuid()),
+        prospectIds: z.array(z.string().uuid()).min(1).max(500),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -632,7 +635,7 @@ export const outreachRouter = createTRPCRouter({
           )
         )
         .limit(1);
-      if (!campaign) throw new Error("Campaign not found");
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
       // Get step 1
       const [step1] = await ctx.db
@@ -645,7 +648,7 @@ export const outreachRouter = createTRPCRouter({
           )
         )
         .limit(1);
-      if (!step1) throw new Error("Campaign has no steps");
+      if (!step1) throw new TRPCError({ code: "BAD_REQUEST", message: "Campaign has no steps" });
 
       // Get unsubscribes
       const unsubs = await ctx.db
@@ -758,7 +761,7 @@ export const outreachRouter = createTRPCRouter({
           )
         )
         .limit(1);
-      if (!campaign) throw new Error("Campaign not found");
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
       // Get pending email sends only
       const pending = await ctx.db
@@ -842,7 +845,7 @@ export const outreachRouter = createTRPCRouter({
           )
         )
         .limit(1);
-      if (!campaign) throw new Error("Campaign not found");
+      if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found" });
 
       const steps = await ctx.db
         .select()
@@ -1076,7 +1079,7 @@ export const outreachRouter = createTRPCRouter({
         .innerJoin(campaigns, eq(campaignSends.campaignId, campaigns.id))
         .where(and(eq(campaignSends.id, input.sendId), eq(campaigns.userId, ctx.userId)))
         .limit(1);
-      if (!send) throw new Error("Send not found");
+      if (!send) throw new TRPCError({ code: "NOT_FOUND", message: "Send not found" });
       const [updated] = await ctx.db
         .update(campaignSends)
         .set({ status: "completed", sentAt: new Date() })

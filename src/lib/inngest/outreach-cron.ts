@@ -281,6 +281,19 @@ export const outreachCron = inngest.createFunction(
             html,
           });
 
+          // Resend SDK returns { data, error } — a non-null error means the
+          // API rejected the send without throwing. Treat this as a failure so
+          // the record doesn't stay "pending" and get re-attempted endlessly,
+          // but also doesn't get falsely marked "sent".
+          if (result.error) {
+            console.error(`[outreach] Resend API error for send ${send.id}:`, result.error);
+            await db
+              .update(campaignSends)
+              .set({ status: "bounced" })
+              .where(eq(campaignSends.id, send.id));
+            continue;
+          }
+
           const resendId = result.data?.id ?? null;
           const sentAt = new Date();
 
@@ -295,8 +308,13 @@ export const outreachCron = inngest.createFunction(
             .where(eq(campaigns.id, send.campaignId));
 
           sentCount++;
-        } catch {
-          // Log error but continue sending others
+        } catch (err) {
+          // Network-level or unexpected throw (timeout, rate limit, etc.).
+          // Leave the row as "pending" so the next cron run retries — the
+          // message was never accepted by Resend so there is no duplicate risk.
+          // Only confirmed Resend rejections (result.error above) become
+          // "bounced" permanently.
+          console.error(`[outreach] Transient error sending campaign send ${send.id}:`, err);
         }
       }
 

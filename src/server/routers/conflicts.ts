@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
+import { TRPCError } from "@trpc/server";
 import { clients, matters, entities } from "@/lib/db/schema";
 import { eq, and, ilike, or, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -136,11 +137,11 @@ Be conservative — flag anything that could be an issue. High = clear conflict,
       });
 
       const text = message.content[0];
-      if (!text || text.type !== "text") throw new Error("Unexpected AI response");
+      if (!text || text.type !== "text") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unexpected AI response" });
 
       try {
         const jsonMatch = text.text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON in response");
+        if (!jsonMatch) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No JSON in AI response" });
         const result = JSON.parse(jsonMatch[0]) as {
           severity: "high" | "medium" | "low" | "none";
           summary: string;

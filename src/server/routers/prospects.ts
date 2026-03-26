@@ -2,6 +2,7 @@ import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { prospects, clients, matters, documents } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { anthropic } from "@/lib/ai/anthropic";
 
 const stageValues = ["lead", "consultation_booked", "consultation_done", "proposal_sent", "won", "lost"] as const;
@@ -30,7 +31,7 @@ export const prospectsRouter = createTRPCRouter({
         .from(prospects)
         .where(and(eq(prospects.id, input.id), eq(prospects.userId, ctx.userId)))
         .limit(1);
-      if (!prospect) throw new Error("Prospect not found");
+      if (!prospect) throw new TRPCError({ code: "NOT_FOUND", message: "Prospect not found" });
       return prospect;
     }),
 
@@ -92,7 +93,7 @@ export const prospectsRouter = createTRPCRouter({
         })
         .where(and(eq(prospects.id, id), eq(prospects.userId, ctx.userId)))
         .returning();
-      if (!updated) throw new Error("Prospect not found");
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Prospect not found" });
       return updated;
     }),
 
@@ -111,7 +112,7 @@ export const prospectsRouter = createTRPCRouter({
         .from(prospects)
         .where(and(eq(prospects.id, input.id), eq(prospects.userId, ctx.userId)))
         .limit(1);
-      if (!prospect) throw new Error("Prospect not found");
+      if (!prospect) throw new TRPCError({ code: "NOT_FOUND", message: "Prospect not found" });
 
       // Gather practice context — what types of cases does this lawyer handle?
       const recentDocs = await ctx.db
@@ -177,7 +178,7 @@ Be specific and actionable. Reference Ontario law where relevant. Keep total res
 
       const [updated] = await ctx.db.update(prospects)
         .set({ aiStrategy: strategy, updatedAt: new Date() })
-        .where(eq(prospects.id, input.id))
+        .where(and(eq(prospects.id, input.id), eq(prospects.userId, ctx.userId)))
         .returning();
 
       return updated;
@@ -195,7 +196,7 @@ Be specific and actionable. Reference Ontario law where relevant. Keep total res
         .from(prospects)
         .where(and(eq(prospects.id, input.id), eq(prospects.userId, ctx.userId)))
         .limit(1);
-      if (!prospect) throw new Error("Prospect not found");
+      if (!prospect) throw new TRPCError({ code: "NOT_FOUND", message: "Prospect not found" });
 
       // Create client
       const [client] = await ctx.db.insert(clients).values({
@@ -222,7 +223,7 @@ Be specific and actionable. Reference Ontario law where relevant. Keep total res
           convertedClientId: client!.id,
           updatedAt: new Date(),
         })
-        .where(eq(prospects.id, input.id));
+        .where(and(eq(prospects.id, input.id), eq(prospects.userId, ctx.userId)));
 
       return client;
     }),

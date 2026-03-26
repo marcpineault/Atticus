@@ -1,4 +1,5 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
+import { TRPCError } from "@trpc/server";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -6,7 +7,7 @@ import { z } from "zod";
 export const usersRouter = createTRPCRouter({
   getSettings: protectedProcedure.query(async ({ ctx }) => {
     const [user] = await ctx.db.select().from(users).where(eq(users.id, ctx.userId)).limit(1);
-    if (!user) throw new Error("User not found");
+    if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
     return user;
   }),
 
@@ -43,7 +44,7 @@ export const usersRouter = createTRPCRouter({
         attempts++;
       } while (attempts < 10);
 
-      throw new Error("Failed to generate unique intake email");
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to generate unique intake email" });
     }),
 
   updateSettings: protectedProcedure
