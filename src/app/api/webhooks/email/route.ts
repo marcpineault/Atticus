@@ -79,20 +79,8 @@ export async function POST(req: NextRequest) {
 
   const payload = verified as ResendInboundPayload;
 
-  // --- 2. Message-ID dedup ---
+  // --- 2. Resolve user from intake address (before dedup, so dedup can be user-scoped) ---
   const messageId = payload.headers?.["message-id"] ?? payload.headers?.["Message-ID"];
-  if (messageId) {
-    const [existing] = await db
-      .select({ id: documents.id })
-      .from(documents)
-      .where(eq(documents.sourceId, messageId))
-      .limit(1);
-    if (existing) {
-      return NextResponse.json({ received: true, duplicate: true });
-    }
-  }
-
-  // --- 3. Resolve user from intake address ---
   const toAddresses = payload.to ?? [];
   let userId: string | null = null;
 
@@ -121,9 +109,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
+  // --- 3. Message-ID dedup (scoped to userId to prevent cross-user collisions) ---
+  // BUG FIX: The original dedup ran before user resolution using a global sourceId match.
+  // A message-id that matched a document belonging to a *different* user would incorrectly
+  // return {duplicate: true} and drop the email for the legitimate recipient.
+  if (messageId) {
+    const [existing] = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.sourceId, messageId), eq(documents.userId, userId)))
+      .limit(1);
+    if (existing) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+  }
+
   // --- 4. Extract and clean email body ---
   const subject = payload.subject ?? "Forwarded Email";
-  const rawEmailBody = payload.text ?? (payload.html ? stripHtml(payload.html) : "");
+  // BUG FIX: Use || instead of ?? so that an empty string text ("") correctly
+  // falls through to the HTML fallback. The nullish coalescing operator (??) only
+  // falls back on null/undefined, so text="" would have silently dropped the HTML.
+  const rawEmailBody = payload.text || (payload.html ? stripHtml(payload.html) : "");
 
   if (!rawEmailBody.trim()) {
     return NextResponse.json({ received: true });
@@ -219,11 +225,22 @@ export async function POST(req: NextRequest) {
     const filename = attachment.filename || `attachment${ext}`;
     const r2Key = `${userId}/${randomUUID()}/${filename}`;
 
-    await uploadToR2(r2Key, buffer, attachment.contentType);
+    // BUG FIX: Wrap each attachment upload in try/catch so a single failed R2 upload
+    // does not propagate and prevent the HTTP response from being sent.
+    // Without this, an R2 error here would leave the email document created but no
+    // response returned to Resend, which would trigger an unnecessary retry.
+    try {
+      await uploadToR2(r2Key, buffer, attachment.contentType);
+    } catch (err) {
+      console.error(`[email-intake] R2 upload failed for ${filename}:`, err);
+      continue;
+    }
 
     const [attachDoc] = await db.insert(documents).values({
       userId,
-      title: `${subject} — ${filename}`,
+      // BUG FIX: Truncate combined title to prevent overshooting any implicit column limit.
+      // subject.slice(0,500) + " — " + filename can still exceed 500 chars; cap the whole thing.
+      title: `${subject} — ${filename}`.slice(0, 500),
       type: "document",
       status: "pending",
       r2Key,
