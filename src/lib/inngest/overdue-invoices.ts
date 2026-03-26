@@ -85,7 +85,6 @@ export const markOverdueInvoices = inngest.createFunction(
     });
 
     // Send reminder emails to clients (where email available)
-    const now = new Date();
     let emailsSent = 0;
     for (const inv of overdueList) {
       if (!inv.clientEmail) continue;
