@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Download, Pencil, Check, X, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { EntityList } from "@/components/clients/entity-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -46,6 +47,9 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
   const [assigningOpen, setAssigningOpen] = useState(false);
   const [assignClientId, setAssignClientId] = useState<string>("");
   const [assignMatterId, setAssignMatterId] = useState<string>("");
+  const [memoText, setMemoText] = useState("");
+  const [taskListText, setTaskListText] = useState("");
+  const [followUpText, setFollowUpText] = useState("");
 
   const utils = trpc.useUtils();
   const { data: doc, isLoading } = trpc.documents.getById.useQuery(
@@ -72,6 +76,14 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
       utils.documents.list.invalidate();
     },
   });
+
+  useEffect(() => {
+    if (doc) {
+      setMemoText(doc.generatedMemo ?? "");
+      setTaskListText(doc.generatedTaskList ?? "");
+      setFollowUpText(doc.generatedFollowUpEmail ?? "");
+    }
+  }, [doc?.id]);
 
   async function handleDownload() {
     setDownloading(true);
@@ -193,7 +205,16 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
         </DialogHeader>
 
         {doc && (
-          <Tabs defaultValue={doc.summary ? "summary" : "content"} className="flex-1 overflow-hidden flex flex-col">
+          <Tabs
+            defaultValue={
+              (doc.generatedMemo || doc.generatedTaskList || doc.generatedFollowUpEmail)
+                ? "outputs"
+                : doc.summary
+                ? "summary"
+                : "content"
+            }
+            className="flex-1 overflow-hidden flex flex-col"
+          >
             <TabsList className="flex-shrink-0">
               {doc.summary && <TabsTrigger value="summary">Summary</TabsTrigger>}
               {doc.rawContent && <TabsTrigger value="content">Full Text</TabsTrigger>}
@@ -204,6 +225,9 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
                     {doc.entities.length}
                   </Badge>
                 </TabsTrigger>
+              )}
+              {(doc.generatedMemo || doc.generatedTaskList || doc.generatedFollowUpEmail) && (
+                <TabsTrigger value="outputs">Outputs</TabsTrigger>
               )}
             </TabsList>
 
@@ -232,6 +256,51 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
                 <ScrollArea className="h-full max-h-[50vh]">
                   <div className="pr-4">
                     <EntityList entities={doc.entities} />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            )}
+
+            {(doc.generatedMemo || doc.generatedTaskList || doc.generatedFollowUpEmail) && (
+              <TabsContent value="outputs" className="flex-1 overflow-hidden mt-3">
+                <ScrollArea className="h-full max-h-[50vh]">
+                  <div className="space-y-4 pr-4">
+                    {doc.generatedMemo && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                          File Memo
+                        </p>
+                        <Textarea
+                          value={memoText}
+                          onChange={(e) => setMemoText(e.target.value)}
+                          className="min-h-[120px] text-sm font-mono resize-y"
+                        />
+                      </div>
+                    )}
+                    {doc.generatedTaskList && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                          Task List
+                        </p>
+                        <Textarea
+                          value={taskListText}
+                          onChange={(e) => setTaskListText(e.target.value)}
+                          className="min-h-[100px] text-sm font-mono resize-y"
+                        />
+                      </div>
+                    )}
+                    {doc.generatedFollowUpEmail && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                          Follow-Up Email Draft
+                        </p>
+                        <Textarea
+                          value={followUpText}
+                          onChange={(e) => setFollowUpText(e.target.value)}
+                          className="min-h-[140px] text-sm font-mono resize-y"
+                        />
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
               </TabsContent>
