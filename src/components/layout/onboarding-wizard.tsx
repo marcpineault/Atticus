@@ -98,7 +98,7 @@ export function OnboardingWizard({ children }: { children: React.ReactNode }) {
       user?.intakeEmail ??
       (await generateIntakeEmail.mutateAsync()).intakeEmail;
 
-    await navigator.clipboard.writeText(intakeEmail);
+    await navigator.clipboard.writeText(intakeEmail ?? "");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     await finishOnboarding();
