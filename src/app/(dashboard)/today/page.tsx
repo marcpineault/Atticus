@@ -115,7 +115,7 @@ export default function TodayPage() {
       <div className="space-y-6">
 
         {/* All clear */}
-        {allClear && quietCount === 0 && upcomingCount === 0 && (
+        {allClear && (
           <Card className="border-green-500/30 bg-green-50/40 dark:bg-green-950/20">
             <CardContent className="py-4 px-4 flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
