@@ -1,7 +1,7 @@
 import { inngest } from "./client";
 import { db } from "@/lib/db";
-import { entities, documents, clients, users, invoices, trustTransactions } from "@/lib/db/schema";
-import { eq, and, inArray, isNull, or, asc } from "drizzle-orm";
+import { entities, documents, clients, users, invoices, trustTransactions, matters } from "@/lib/db/schema";
+import { eq, and, inArray, isNull, or, asc, gte, isNotNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { buildDailyBriefingEmail } from "@/lib/email/templates";
@@ -157,6 +157,35 @@ export const dailyBriefing = inngest.createFunction(
         return (result.rows[0] as { total: number })?.total ?? 0;
       });
 
+      const quietMattersRows = await step.run(`fetch-quiet-matters-${user.id}`, async () => {
+        const thirtyDaysAgo = new Date(now);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const activeMattersRows = await db
+          .select({ id: matters.id, title: matters.title })
+          .from(matters)
+          .where(and(eq(matters.userId, user.id), eq(matters.status, "active")));
+
+        if (activeMattersRows.length === 0) return [];
+
+        const recentActivity = await db
+          .selectDistinct({ matterId: documents.matterId })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.userId, user.id),
+              gte(documents.createdAt, thirtyDaysAgo),
+              isNotNull(documents.matterId),
+            )
+          );
+
+        const recentIds = new Set(recentActivity.map((d) => d.matterId));
+        return activeMattersRows
+          .filter((m) => !recentIds.has(m.id))
+          .slice(0, 3)
+          .map((m) => ({ title: m.title }));
+      });
+
       // Skip if nothing to report
       const overdueInvoiceList = overdueInvoiceRows.map(i => ({
         invoiceNumber: i.invoiceNumber,
@@ -171,7 +200,8 @@ export const dailyBriefing = inngest.createFunction(
       const unbilledHours = unbilledTimeRow / 60;
 
       if (overdue.length === 0 && today.length === 0 && upcoming.length === 0 &&
-          overdueInvoiceList.length === 0 && negativeTrustList.length === 0 && unbilledHours < 1) {
+          overdueInvoiceList.length === 0 && negativeTrustList.length === 0 && unbilledHours < 1 &&
+          quietMattersRows.length === 0) {
         skipped++;
         continue;
       }
@@ -185,6 +215,7 @@ export const dailyBriefing = inngest.createFunction(
         negativeTrustClients: negativeTrustList,
         unbilledHours,
         hourlyRate: user.hourlyRate ?? 400,
+        quietMatters: quietMattersRows,
       });
 
       await step.run(`send-email-${user.id}`, async () => {

@@ -162,10 +162,12 @@ export function buildDailyBriefingEmail(params: {
   unbilledHours?: number;
   hourlyRate?: number;
   negativeTrustClients?: Array<{ clientName: string | null; balance: number }>;
+  quietMatters?: Array<{ title: string }>;
 }) {
   const {
     userName, todayDeadlines, upcomingDeadlines, overdueDeadlines,
     overdueInvoices = [], unbilledHours = 0, hourlyRate = 400, negativeTrustClients = [],
+    quietMatters = [],
   } = params;
   const firstName = userName.split(" ")[0] ?? userName;
   const appUrl = APP_URL;
@@ -276,10 +278,20 @@ export function buildDailyBriefingEmail(params: {
       </div>
     </div>` : ""}
 
+    ${quietMatters.length > 0 ? `
+    <!-- Quiet Matters -->
+    <div style="padding: 20px 32px 0;">
+      <h3 style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">📁 No Activity in 30+ Days (${quietMatters.length})</h3>
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px 16px;">
+        ${quietMatters.map(m => `<p style="margin: 4px 0; font-size: 13px; color: #374151;">· ${m.title}</p>`).join("")}
+        <p style="margin: 8px 0 0; font-size: 12px; color: #9ca3af;">These matters have had no new documents uploaded recently.</p>
+      </div>
+    </div>` : ""}
+
     <!-- CTA -->
     <div style="padding: 24px 32px 32px;">
-      <a href="${appUrl}/deadlines" style="display: inline-block; background: #0f172a; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
-        Open Atticus Deadlines →
+      <a href="${appUrl}/today" style="display: inline-block; background: #0f172a; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 500;">
+        Open Today's Briefing →
       </a>
     </div>
 
@@ -304,7 +316,7 @@ export function buildDailyBriefingEmail(params: {
     negativeTrustClients.length > 0 ? `TRUST BALANCE ALERTS:\n${negativeTrustClients.map(c => `- ${c.clientName ?? "Unknown"}: -$${Math.abs(c.balance / 100).toFixed(2)}`).join("\n")}` : "",
     unbilledHours >= 1 ? `UNBILLED TIME: ${unbilledHours.toFixed(1)} hrs — consider generating invoices` : "",
     "",
-    `Open Atticus: ${appUrl}/deadlines`,
+    `Open Atticus: ${appUrl}/today`,
   ].filter(Boolean).join("\n");
 
   return { html, text };
