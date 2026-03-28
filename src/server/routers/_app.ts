@@ -1,4 +1,5 @@
 import { createTRPCRouter } from "@/server/trpc";
+import { todayRouter } from "./today";
 import { clientsRouter } from "./clients";
 import { mattersRouter } from "./matters";
 import { documentsRouter } from "./documents";
@@ -16,6 +17,7 @@ import { prospectsRouter } from "./prospects";
 import { outreachRouter } from "./outreach";
 
 export const appRouter = createTRPCRouter({
+  today: todayRouter,
   clients: clientsRouter,
   matters: mattersRouter,
   documents: documentsRouter,
