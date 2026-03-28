@@ -4,44 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
+  Sun,
   Users,
   Briefcase,
-  MessageSquare,
-  Upload,
-  Settings,
-  Search,
   FileText,
   AlertTriangle,
-  Clock,
   FileEdit,
-  Mail,
-  BarChart2,
-  Scale,
-  ShieldCheck,
-  Target,
-  Send,
+  Receipt,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeadlineBadge } from "./deadline-badge";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/today", label: "Today", icon: Sun },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/matters", label: "Matters", icon: Briefcase },
-  { href: "/deadlines", label: "Deadlines", icon: AlertTriangle, badge: <DeadlineBadge /> },
   { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/billing", label: "Billing", icon: Clock },
-  { href: "/trust", label: "Trust", icon: Scale },
-  { href: "/prospects", label: "Prospects", icon: Target },
-  { href: "/outreach", label: "Outreach", icon: Send },
-  { href: "/conflicts", label: "Conflict Check", icon: ShieldCheck },
-  { href: "/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/draft", label: "AI Draft", icon: FileEdit },
-  { href: "/outbox", label: "Outbox", icon: Mail },
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/upload", label: "Upload", icon: Upload },
+  { href: "/deadlines", label: "Deadlines", icon: AlertTriangle, badge: <DeadlineBadge /> },
+  { href: "/draft", label: "Drafts", icon: FileEdit },
+  { href: "/billing", label: "Invoices", icon: Receipt },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -51,7 +33,7 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-64 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-6">
-        <Link href="/dashboard" className="text-lg font-semibold">
+        <Link href="/today" className="text-lg font-semibold">
           Atticus
         </Link>
       </div>
