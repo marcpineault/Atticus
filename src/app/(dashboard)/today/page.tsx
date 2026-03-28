@@ -59,6 +59,10 @@ function SectionHeader({ icon: Icon, title, count }: {
 
 export default function TodayPage() {
   const { data, isLoading } = trpc.today.getBriefing.useQuery();
+  const utils = trpc.useUtils();
+  const resolveItem = trpc.today.resolveItem.useMutation({
+    onSuccess: () => utils.today.getBriefing.invalidate(),
+  });
   const [captureOpen, setCaptureOpen] = useState(false);
 
   const hour = new Date().getHours();
@@ -135,7 +139,15 @@ export default function TodayPage() {
                 <Card key={item.id} className="border-destructive/40">
                   <CardContent className="py-3 px-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <button
+                        onClick={() => resolveItem.mutate({ id: item.id })}
+                        disabled={resolveItem.isPending}
+                        className="shrink-0 text-muted-foreground/40 hover:text-green-600 transition-colors disabled:opacity-50"
+                        title="Mark as done"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{item.value}</p>
                         {(item.clientName ?? item.matterTitle) && (
                           <p className="text-xs text-muted-foreground mt-0.5">
@@ -165,7 +177,15 @@ export default function TodayPage() {
                 <Card key={item.id}>
                   <CardContent className="py-3 px-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <button
+                        onClick={() => resolveItem.mutate({ id: item.id })}
+                        disabled={resolveItem.isPending}
+                        className="shrink-0 text-muted-foreground/40 hover:text-green-600 transition-colors disabled:opacity-50"
+                        title="Mark as done"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{item.value}</p>
                         {(item.clientName ?? item.matterTitle) && (
                           <p className="text-xs text-muted-foreground mt-0.5">

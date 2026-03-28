@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Download, Pencil, Check, X, Link2 } from "lucide-react";
+import { Loader2, Download, Pencil, Check, X, Link2, Copy, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +50,9 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
   const [memoText, setMemoText] = useState("");
   const [taskListText, setTaskListText] = useState("");
   const [followUpText, setFollowUpText] = useState("");
+  const [copiedMemo, setCopiedMemo] = useState(false);
+  const [copiedTaskList, setCopiedTaskList] = useState(false);
+  const [copiedFollowUp, setCopiedFollowUp] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: doc, isLoading } = trpc.documents.getById.useQuery(
@@ -267,9 +270,22 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
                   <div className="space-y-4 pr-4">
                     {doc.generatedMemo && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                          File Memo
-                        </p>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            File Memo
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(memoText);
+                              setCopiedMemo(true);
+                              setTimeout(() => setCopiedMemo(false), 1500);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          >
+                            {copiedMemo ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            {copiedMemo ? "Copied" : "Copy"}
+                          </button>
+                        </div>
                         <Textarea
                           value={memoText}
                           onChange={(e) => setMemoText(e.target.value)}
@@ -279,9 +295,22 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
                     )}
                     {doc.generatedTaskList && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                          Task List
-                        </p>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            Task List
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(taskListText);
+                              setCopiedTaskList(true);
+                              setTimeout(() => setCopiedTaskList(false), 1500);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          >
+                            {copiedTaskList ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            {copiedTaskList ? "Copied" : "Copy"}
+                          </button>
+                        </div>
                         <Textarea
                           value={taskListText}
                           onChange={(e) => setTaskListText(e.target.value)}
@@ -291,14 +320,34 @@ export function DocumentDetailDialog({ docId, children }: DocumentDetailDialogPr
                     )}
                     {doc.generatedFollowUpEmail && (
                       <div>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                          Follow-Up Email Draft
-                        </p>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            Follow-Up Email Draft
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(followUpText);
+                              setCopiedFollowUp(true);
+                              setTimeout(() => setCopiedFollowUp(false), 1500);
+                            }}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          >
+                            {copiedFollowUp ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            {copiedFollowUp ? "Copied" : "Copy"}
+                          </button>
+                        </div>
                         <Textarea
                           value={followUpText}
                           onChange={(e) => setFollowUpText(e.target.value)}
                           className="min-h-[140px] text-sm font-mono resize-y"
                         />
+                        <a
+                          href={`mailto:?subject=Follow-up&body=${encodeURIComponent(followUpText)}`}
+                          className="mt-1.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Open in email client
+                        </a>
                       </div>
                     )}
                   </div>

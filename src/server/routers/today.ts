@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { documents, entities, matters, clients, invoices } from "@/lib/db/schema";
 import { eq, and, lt, gte, inArray, isNotNull, desc, asc } from "drizzle-orm";
@@ -137,4 +138,13 @@ export const todayRouter = createTRPCRouter({
 
     return { overdueItems, upcomingItems, overdueInvoices, quietMatters, recentRecordings };
   }),
+
+  resolveItem: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(entities)
+        .set({ resolved: true })
+        .where(and(eq(entities.id, input.id), eq(entities.userId, ctx.userId)));
+    }),
 });
