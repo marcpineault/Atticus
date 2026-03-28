@@ -12,6 +12,7 @@ import { extractEntities } from "@/lib/ingestion/extract-entities";
 import { chunkAndEmbed } from "@/lib/ingestion/chunk-embed";
 import { summarizeDocument } from "@/lib/ingestion/summarize";
 import { estimateBillableMinutes } from "@/lib/ingestion/estimate-billable";
+import { generateDocumentOutputs } from "@/lib/ingestion/generate-outputs";
 
 export const ingestDocument = inngest.createFunction(
   {
@@ -178,6 +179,20 @@ export const ingestDocument = inngest.createFunction(
           summary,
           billableMinutes,
           status: "completed",
+          updatedAt: new Date(),
+        })
+        .where(eq(documents.id, documentId));
+    });
+
+    await step.run("generate-outputs", async () => {
+      if (doc.type !== "voice_note" && doc.type !== "meeting") return;
+      const outputs = await generateDocumentOutputs(rawContent, doc.title ?? "Untitled");
+      await db
+        .update(documents)
+        .set({
+          generatedMemo: outputs.memo,
+          generatedTaskList: outputs.taskList,
+          generatedFollowUpEmail: outputs.followUpEmail,
           updatedAt: new Date(),
         })
         .where(eq(documents.id, documentId));
