@@ -222,7 +222,7 @@ export default function TodayPage() {
                         )}
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold">
+                        <p className="text-sm font-semibold tabular-nums">
                           ${((inv.totalAmount ?? 0) / 100).toLocaleString("en-CA", {
                             minimumFractionDigits: 2,
                           })}

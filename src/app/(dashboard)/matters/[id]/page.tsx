@@ -323,7 +323,7 @@ export default function MatterDetailPage({ params }: MatterDetailPageProps) {
             return (
               <div className="mt-2 flex items-center gap-2">
                 <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className={`h-full rounded-full ${pct === 100 ? "bg-green-500" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full ${pct === 100 ? "bg-green-500" : "bg-primary"}`} style={{ width: `${pct}%` }} />
                 </div>
                 <span className="text-xs text-muted-foreground">{resolved}/{actionEntities.length} tasks done</span>
               </div>
@@ -677,7 +677,7 @@ export default function MatterDetailPage({ params }: MatterDetailPageProps) {
                           placeholder="e.g. The documents have been reviewed. Please check your portal for updates…"
                           value={notifyMessage}
                           onChange={(e) => setNotifyMessage(e.target.value)}
-                          className="resize-none min-h-[80px] text-sm"
+                          className="resize-none min-h-20 text-sm"
                           maxLength={500}
                         />
                       </div>
@@ -826,7 +826,7 @@ export default function MatterDetailPage({ params }: MatterDetailPageProps) {
             value={notesValue}
             onChange={(e) => setNotesValue(e.target.value)}
             placeholder="Private notes about this matter — visible only to you…"
-            className="min-h-[80px] text-sm resize-none bg-background"
+            className="min-h-20 text-sm resize-none bg-background"
             autoFocus
           />
         ) : matter.notes ? (
@@ -1123,7 +1123,7 @@ export default function MatterDetailPage({ params }: MatterDetailPageProps) {
                               {new Date(entry.entryDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                             </p>
                             {entry.billedAt && (
-                              <Badge variant="secondary" className="text-[10px] h-4 px-1.5">Billed</Badge>
+                              <Badge variant="secondary" className="text-xs h-4 px-1.5">Billed</Badge>
                             )}
                           </div>
                         </div>

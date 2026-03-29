@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Loader2, ChevronRight, Search, FileText, AlertTriangle, LayoutList, Columns3 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, Loader2, ChevronRight, Search, FileText, AlertTriangle, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
 
 const statusVariants: Record<
   string,
@@ -89,7 +90,7 @@ export default function MattersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "closed">("active");
   const [viewMode, setViewMode] = useState<"list" | "board">("list");
-  const { data: matters, isLoading, error } = trpc.matters.listWithStats.useQuery();
+  const { data: matters, isLoading, error, refetch } = trpc.matters.listWithStats.useQuery();
   const { data: clients } = trpc.clients.list.useQuery();
 
   const clientMap = new Map(clients?.map((c) => [c.id, c]) ?? []);
@@ -155,15 +156,33 @@ export default function MattersPage() {
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-lg border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ))}
         </div>
       )}
 
       {error && (
-        <p className="text-sm text-destructive">
-          Failed to load matters: {error.message}
-        </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold">Failed to load matters</h3>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            Something went wrong while fetching your matters. Please try again.
+          </p>
+          <Button className="mt-4" variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+          </Button>
+        </div>
       )}
 
       {matters && matters.length > 0 && (

@@ -310,7 +310,7 @@ export default function OutreachPage() {
                       <p className="text-sm font-medium truncate">{c.name}</p>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] px-1.5 py-0"
+                        className="text-xs px-1.5 py-0"
                       >
                         <span
                           className={`inline-block h-1.5 w-1.5 rounded-full mr-1 ${STATUS_COLORS[c.status] ?? "bg-zinc-500"}`}

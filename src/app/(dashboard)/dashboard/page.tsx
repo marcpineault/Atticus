@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 href={item.href}
                 className="flex items-center gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
               >
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
                   {item.step}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -465,7 +465,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${barColor}`}
+                      className={`h-full transition-all ${barColor}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

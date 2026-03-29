@@ -259,7 +259,7 @@ export default function DraftPage() {
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
                     placeholder="e.g. Draft a demand letter to opposing counsel regarding the missed payment of $50,000 due on March 1. Reference the settlement agreement signed in January. Deadline to respond is 10 days."
-                    className="min-h-[140px] resize-none text-sm"
+                    className="min-h-36 resize-none text-sm"
                   />
                   <p className="text-xs text-muted-foreground">
                     Be specific. Include names, amounts, dates, and what action you want taken.

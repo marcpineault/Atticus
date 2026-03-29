@@ -46,7 +46,7 @@ const STAGES = [
   { value: "lead", label: "Lead", color: "bg-blue-500" },
   { value: "consultation_booked", label: "Consultation Booked", color: "bg-yellow-500" },
   { value: "consultation_done", label: "Consultation Done", color: "bg-orange-500" },
-  { value: "proposal_sent", label: "Proposal Sent", color: "bg-purple-500" },
+  { value: "proposal_sent", label: "Proposal Sent", color: "bg-violet-500" },
   { value: "won", label: "Won", color: "bg-green-500" },
   { value: "lost", label: "Lost", color: "bg-red-500" },
 ] as const;
@@ -231,7 +231,7 @@ export default function ProspectsPage() {
                       <p className="text-sm font-medium truncate">
                         {p.name}
                         {p.source === "lso_directory" && (
-                          <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0 align-middle">LSO</Badge>
+                          <Badge variant="outline" className="ml-1.5 text-xs px-1 py-0 align-middle">LSO</Badge>
                         )}
                       </p>
                       {p.company && <p className="text-xs text-muted-foreground truncate">{p.company}</p>}
@@ -274,7 +274,7 @@ export default function ProspectsPage() {
                   <p className="text-sm font-medium">
                     {p.name}
                     {p.source === "lso_directory" && (
-                      <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0 align-middle">LSO</Badge>
+                      <Badge variant="outline" className="ml-1.5 text-xs px-1 py-0 align-middle">LSO</Badge>
                     )}
                   </p>
                   <p className="text-xs text-muted-foreground">

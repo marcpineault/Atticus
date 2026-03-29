@@ -23,7 +23,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Download, Clock, FileText, Plus, Send, CheckCircle2, Trash2, ExternalLink } from "lucide-react";
+import { Loader2, Download, Clock, FileText, Plus, Send, CheckCircle2, Trash2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   draft: "secondary",
@@ -325,8 +326,17 @@ export default function BillingPage() {
       {tab === "summary" && (
         <>
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-56" />
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                </div>
+              ))}
             </div>
           ) : combinedReport.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
@@ -401,7 +411,7 @@ export default function BillingPage() {
                                 )}
                               </div>
                               <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                                <div className="h-full rounded-full bg-primary/60" style={{ width: `${pct}%` }} />
+                                <div className="h-full bg-primary/60" style={{ width: `${pct}%` }} />
                               </div>
                             </div>
                             <div className="flex items-center gap-6 flex-shrink-0 text-right">
@@ -551,8 +561,17 @@ export default function BillingPage() {
           )}
 
           {invoicesLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 rounded-lg border px-4 py-3">
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                  <Skeleton className="h-4 w-20 tabular-nums" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              ))}
             </div>
           ) : !invoiceList || invoiceList.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">

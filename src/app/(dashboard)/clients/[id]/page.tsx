@@ -309,7 +309,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
             value={notesValue}
             onChange={(e) => setNotesValue(e.target.value)}
             placeholder="Private notes about this client — visible only to you…"
-            className="min-h-[80px] text-sm resize-none bg-background"
+            className="min-h-20 text-sm resize-none bg-background"
             autoFocus
           />
         ) : client.notes ? (
@@ -680,12 +680,12 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
                             year: "numeric", month: "short", day: "numeric",
                           })}
                         </span>
-                        <Badge variant="outline" className="text-[10px] px-1.5 h-4">
+                        <Badge variant="outline" className="text-xs px-1.5 h-4">
                           {item.badge === "action_item" ? "Action" :
                             item.badge ? item.badge.charAt(0).toUpperCase() + item.badge.slice(1) : ""}
                         </Badge>
                         {"resolved" in item && item.resolved && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 h-4 text-green-600">Done</Badge>
+                          <Badge variant="secondary" className="text-xs px-1.5 h-4 text-green-600">Done</Badge>
                         )}
                       </div>
                       <p className="text-sm font-medium leading-snug">{item.title}</p>

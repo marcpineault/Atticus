@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, RefreshCw, Trash2, UserPlus, Search } from "lucide-react";
+import { Loader2, RefreshCw, Trash2, UserPlus, Search, AlertCircle, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { DocumentDetailDialog } from "@/components/documents/document-detail-dialog";
 import { AssignDialog } from "@/components/documents/assign-dialog";
@@ -107,7 +108,7 @@ export default function DocumentsPage() {
 
       {/* Search + Filters */}
       <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
@@ -146,13 +147,25 @@ export default function DocumentsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 rounded-lg border px-4 py-3">
+              <Skeleton className="h-8 w-8 rounded-md flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-64" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
-          <p className="text-sm font-medium">No documents found</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold">No documents found</h3>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
             {allDocuments?.length === 0
               ? "Upload your first document to get started."
               : "Try adjusting the filters."}
