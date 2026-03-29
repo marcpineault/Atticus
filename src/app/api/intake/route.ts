@@ -6,18 +6,27 @@ import { z } from "zod";
 import { resend, FROM_EMAIL } from "@/lib/email/client";
 import { APP_URL } from "@/lib/stripe/client";
 
+// Strip null bytes that PostgreSQL rejects with "invalid byte sequence for UTF-8: 0x00"
+const stripNulls = (s: string) => s.replace(/\0/g, "");
+
 const intakeSchema = z.object({
   userId: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  email: z.string().email().max(200),
-  phone: z.string().max(50).optional(),
-  matterType: z.string().max(100).optional(),
-  message: z.string().max(2000).optional(),
+  name: z.string().min(1).max(200).transform(stripNulls),
+  email: z.string().email().max(200).transform(stripNulls),
+  phone: z.string().max(50).transform(stripNulls).optional(),
+  matterType: z.string().max(100).transform(stripNulls).optional(),
+  message: z.string().max(2000).transform(stripNulls).optional(),
 });
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      // Malformed or empty JSON body — treat as a bad request
+      return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
+    }
     const input = intakeSchema.parse(body);
 
     // Look up the lawyer
