@@ -12,6 +12,7 @@ import {
   FileEdit,
   Receipt,
   Settings,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeadlineBadge } from "./deadline-badge";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/matters", label: "Matters", icon: Briefcase },
   { href: "/documents", label: "Documents", icon: FileText },
+  { href: "/record", label: "Record", icon: Mic },
   { href: "/deadlines", label: "Deadlines", icon: AlertTriangle, badge: <DeadlineBadge /> },
   { href: "/draft", label: "Drafts", icon: FileEdit },
   { href: "/billing", label: "Invoices", icon: Receipt },
