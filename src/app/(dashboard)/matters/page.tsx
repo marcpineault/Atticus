@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Loader2, ChevronRight, Search, FileText, AlertTriangle, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
+import { Plus, ChevronRight, Search, FileText, AlertTriangle, AlertCircle, RefreshCw, LayoutList, Columns3 } from "lucide-react";
 
 const statusVariants: Record<
   string,

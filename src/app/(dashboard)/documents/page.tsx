@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, RefreshCw, Trash2, UserPlus, Search, AlertCircle, FileText } from "lucide-react";
+import { RefreshCw, Trash2, UserPlus, Search, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { DocumentDetailDialog } from "@/components/documents/document-detail-dialog";

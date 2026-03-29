@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Download, Clock, FileText, Plus, Send, CheckCircle2, Trash2, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, Download, Clock, FileText, Plus, Send, CheckCircle2, Trash2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
