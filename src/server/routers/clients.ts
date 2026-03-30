@@ -10,6 +10,7 @@ const createClientSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   company: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const updateClientSchema = createClientSchema.partial().extend({
@@ -85,6 +86,64 @@ export const clientsRouter = createTRPCRouter({
         .values({ userId: ctx.userId, ...input })
         .returning();
       return client!;
+    }),
+
+  bulkCreate: protectedProcedure
+    .input(z.array(createClientSchema).max(500))
+    .mutation(async ({ ctx, input }) => {
+      const existingClients = await ctx.db
+        .select({ email: clients.email })
+        .from(clients)
+        .where(eq(clients.userId, ctx.userId));
+
+      const existingEmails = new Set(
+        existingClients
+          .map((client) => client.email?.trim().toLowerCase())
+          .filter((email): email is string => Boolean(email))
+      );
+
+      const seenImportedEmails = new Set<string>();
+      const errors: string[] = [];
+      let skipped = 0;
+
+      const rowsToInsert = input.flatMap((row, index) => {
+        const name = row.name.trim();
+        const email = row.email?.trim();
+        const normalizedEmail = email?.toLowerCase();
+
+        if (!name) {
+          errors.push(`Row ${index + 1}: name is required`);
+          return [];
+        }
+
+        if (normalizedEmail && (existingEmails.has(normalizedEmail) || seenImportedEmails.has(normalizedEmail))) {
+          skipped += 1;
+          return [];
+        }
+
+        if (normalizedEmail) {
+          seenImportedEmails.add(normalizedEmail);
+        }
+
+        return [{
+          userId: ctx.userId,
+          name,
+          email: email || null,
+          phone: row.phone?.trim() || null,
+          company: row.company?.trim() || null,
+          notes: row.notes?.trim() || null,
+        }];
+      });
+
+      if (rowsToInsert.length > 0) {
+        await ctx.db.insert(clients).values(rowsToInsert);
+      }
+
+      return {
+        imported: rowsToInsert.length,
+        skipped,
+        errors,
+      };
     }),
 
   update: protectedProcedure
