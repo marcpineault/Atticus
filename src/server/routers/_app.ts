@@ -15,7 +15,6 @@ import { trustRouter } from "./trust";
 import { conflictsRouter } from "./conflicts";
 import { prospectsRouter } from "./prospects";
 import { outreachRouter } from "./outreach";
-import { importsRouter } from "./imports";
 
 export const appRouter = createTRPCRouter({
   today: todayRouter,
@@ -34,7 +33,6 @@ export const appRouter = createTRPCRouter({
   conflicts: conflictsRouter,
   prospects: prospectsRouter,
   outreach: outreachRouter,
-  imports: importsRouter,
 });
 
 export type AppRouter = typeof appRouter;
