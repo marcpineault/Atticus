@@ -5,6 +5,14 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { anthropic } from "@/lib/ai/anthropic";
 
+function normalizeImportKey(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function clientImportKey(name: string, company?: string | null) {
+  return `${normalizeImportKey(name)}::${normalizeImportKey(company)}`;
+}
+
 const createClientSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().optional(),
@@ -143,6 +151,103 @@ export const clientsRouter = createTRPCRouter({
         imported: rowsToInsert.length,
         skipped,
         errors,
+      };
+    }),
+
+  bulkUpsert: protectedProcedure
+    .input(z.array(createClientSchema).max(500))
+    .mutation(async ({ ctx, input }) => {
+      const existingClients = await ctx.db
+        .select({
+          id: clients.id,
+          name: clients.name,
+          company: clients.company,
+          email: clients.email,
+        })
+        .from(clients)
+        .where(eq(clients.userId, ctx.userId));
+
+      const clientByKey = new Map(
+        existingClients.map((client) => [
+          clientImportKey(client.name, client.company),
+          client,
+        ])
+      );
+      const clientByEmail = new Map(
+        existingClients
+          .filter((client): client is { id: string; name: string; company: string | null; email: string } => Boolean(client.email))
+          .map((client) => [normalizeImportKey(client.email), client])
+      );
+
+      const uniqueRows: Array<z.infer<typeof createClientSchema>> = [];
+      const seenKeys = new Set<string>();
+      const seenEmails = new Set<string>();
+
+      for (const row of input) {
+        const name = row.name.trim();
+        if (!name) continue;
+
+        const email = row.email?.trim();
+        const normalizedEmail = email ? normalizeImportKey(email) : "";
+        const key = clientImportKey(name, row.company);
+
+        if (normalizedEmail && seenEmails.has(normalizedEmail)) continue;
+        if (seenKeys.has(key)) continue;
+
+        seenKeys.add(key);
+        if (normalizedEmail) seenEmails.add(normalizedEmail);
+
+        uniqueRows.push({
+          name,
+          email: email || undefined,
+          phone: row.phone?.trim() || undefined,
+          company: row.company?.trim() || undefined,
+          notes: row.notes?.trim() || undefined,
+        });
+      }
+
+      const rowsToInsert = uniqueRows.filter((row) => {
+        const emailKey = row.email ? normalizeImportKey(row.email) : "";
+        const key = clientImportKey(row.name, row.company);
+        return !clientByKey.has(key) && (!emailKey || !clientByEmail.has(emailKey));
+      });
+
+      const inserted = rowsToInsert.length > 0
+        ? await ctx.db
+            .insert(clients)
+            .values(
+              rowsToInsert.map((row) => ({
+                userId: ctx.userId,
+                name: row.name.trim(),
+                email: row.email?.trim() || null,
+                phone: row.phone?.trim() || null,
+                company: row.company?.trim() || null,
+                notes: row.notes?.trim() || null,
+              }))
+            )
+            .returning({
+              id: clients.id,
+              name: clients.name,
+              company: clients.company,
+              email: clients.email,
+            })
+        : [];
+
+      const resolved = new Map(clientByKey);
+      for (const client of inserted) {
+        resolved.set(clientImportKey(client.name, client.company), client);
+      }
+
+      return {
+        created: inserted.length,
+        matched: uniqueRows.length - inserted.length,
+        clients: uniqueRows.flatMap((row) => {
+          const emailKey = row.email ? normalizeImportKey(row.email) : "";
+          const existing =
+            (emailKey ? clientByEmail.get(emailKey) : undefined) ??
+            resolved.get(clientImportKey(row.name, row.company));
+          return existing ? [existing] : [];
+        }),
       };
     }),
 
