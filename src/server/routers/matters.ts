@@ -1,6 +1,6 @@
 import { createTRPCRouter, protectedProcedure } from "@/server/trpc";
 import { matters, documents, entities, timeEntries, trustTransactions, clients, users } from "@/lib/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -135,6 +135,14 @@ export const MATTER_TEMPLATES = [
 
 const anthropic = new Anthropic();
 
+function normalizeImportKey(value: string | null | undefined) {
+  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function matterImportKey(clientId: string, title: string) {
+  return `${clientId}::${normalizeImportKey(title)}`;
+}
+
 const createMatterSchema = z.object({
   clientId: z.string().uuid(),
   title: z.string().min(1),
@@ -263,6 +271,89 @@ export const mattersRouter = createTRPCRouter({
         .values({ userId: ctx.userId, ...input })
         .returning();
       return matter!;
+    }),
+
+  bulkUpsert: protectedProcedure
+    .input(z.array(createMatterSchema).max(1000))
+    .mutation(async ({ ctx, input }) => {
+      const uniqueRows: Array<z.infer<typeof createMatterSchema>> = [];
+      const seenKeys = new Set<string>();
+
+      for (const row of input) {
+        const title = row.title.trim();
+        if (!title) continue;
+
+        const key = matterImportKey(row.clientId, title);
+        if (seenKeys.has(key)) continue;
+
+        seenKeys.add(key);
+        uniqueRows.push({
+          clientId: row.clientId,
+          title,
+          description: row.description?.trim() || undefined,
+          hourlyRate: row.hourlyRate,
+        });
+      }
+
+      if (uniqueRows.length === 0) {
+        return { created: 0, matched: 0, matters: [] };
+      }
+
+      const clientIds = Array.from(new Set(uniqueRows.map((row) => row.clientId)));
+      const existingMatters = await ctx.db
+        .select({
+          id: matters.id,
+          clientId: matters.clientId,
+          title: matters.title,
+          description: matters.description,
+        })
+        .from(matters)
+        .where(and(eq(matters.userId, ctx.userId), inArray(matters.clientId, clientIds)));
+
+      const matterByKey = new Map(
+        existingMatters.map((matter) => [
+          matterImportKey(matter.clientId, matter.title),
+          matter,
+        ])
+      );
+
+      const rowsToInsert = uniqueRows.filter(
+        (row) => !matterByKey.has(matterImportKey(row.clientId, row.title))
+      );
+
+      const inserted = rowsToInsert.length > 0
+        ? await ctx.db
+            .insert(matters)
+            .values(
+              rowsToInsert.map((row) => ({
+                userId: ctx.userId,
+                clientId: row.clientId,
+                title: row.title,
+                description: row.description ?? null,
+                hourlyRate: row.hourlyRate,
+              }))
+            )
+            .returning({
+              id: matters.id,
+              clientId: matters.clientId,
+              title: matters.title,
+              description: matters.description,
+            })
+        : [];
+
+      const resolved = new Map(matterByKey);
+      for (const matter of inserted) {
+        resolved.set(matterImportKey(matter.clientId, matter.title), matter);
+      }
+
+      return {
+        created: inserted.length,
+        matched: uniqueRows.length - inserted.length,
+        matters: uniqueRows.flatMap((row) => {
+          const matter = resolved.get(matterImportKey(row.clientId, row.title));
+          return matter ? [matter] : [];
+        }),
+      };
     }),
 
   createWithTemplate: protectedProcedure

@@ -36,6 +36,7 @@ const PAGES = [
   { label: "Matters", href: "/matters", icon: Briefcase },
   { label: "Deadlines", href: "/deadlines", icon: AlertTriangle },
   { label: "Documents", href: "/documents", icon: FileText },
+  { label: "Import", href: "/import", icon: Upload },
   { label: "Billing", href: "/billing", icon: Clock },
   { label: "Trust Account", href: "/trust", icon: Scale },
   { label: "Conflict Check", href: "/conflicts", icon: ShieldCheck },
